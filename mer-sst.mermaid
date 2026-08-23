@@ -1,0 +1,230 @@
+erDiagram
+    ROLE ||--o{ USERS : "tiene"
+    COMPANY ||--o{ SITE : "posee"
+    COMPANY ||--o{ MINUTE : "recibe"
+    SITE ||--o{ MINUTE : "ocurre en"
+    MINUTE ||--o{ MEETING_ATTENDEE : "registra asistencia de"
+    MINUTE ||--o| MEETING_CONTENT : "tiene contenido de"
+    DOCUMENT_TYPE ||--o{ DOCUMENT : "clasifica"
+    USERS ||--o{ DOCUMENT : "aprueba (opcional)"
+    USERS ||--o{ MINUTE : "registra"
+    COURSE ||--o{ LESSON : "contiene"
+    COURSE ||--o{ QUIZ_QUESTION : "evalua"
+    QUIZ_QUESTION ||--o{ QUIZ_OPTION : "ofrece"
+    USERS ||--o{ USER_COURSE_PROGRESS : "avanza"
+    COURSE ||--o{ USER_COURSE_PROGRESS : "es cursado en"
+    USERS ||--o{ GAME_SESSION : "juega"
+    USERS ||--o{ USER_BADGE : "obtiene"
+    BADGE ||--o{ USER_BADGE : "es otorgada en"
+    USERS ||--o{ CHECKLIST_RESPONSE : "actualiza"
+    CHECKLIST_ITEM ||--|| CHECKLIST_RESPONSE : "tiene"
+    USERS ||--o{ AUDIT_LOG : "genera"
+
+    ROLE {
+        int RoleId PK
+        varchar Name "admin | colaborador"
+    }
+    USERS {
+        int UserId PK
+        varchar Username UK
+        varchar PasswordHash
+        varchar FullName
+        int RoleId FK
+        timestamptz CreatedAt
+    }
+    COMPANY {
+        int CompanyId PK
+        varchar Name
+        timestamptz CreatedAt
+    }
+    SITE {
+        int SiteId PK
+        int CompanyId FK
+        varchar Name
+    }
+    DOCUMENT_TYPE {
+        int DocumentTypeId PK
+        varchar Name
+    }
+    DOCUMENT {
+        int DocumentId PK
+        int DocumentTypeId FK
+        int CompanyId FK "nullable"
+        int SiteId FK "nullable"
+        varchar CollaboratorName
+        varchar Activity
+        date CaptureDate
+        date ExpirationDate
+        varchar Status "pendiente | aprobado"
+        int ApprovedByUserId FK "nullable"
+        timestamptz SignedAt "nullable"
+    }
+    MINUTE {
+        int MinuteId PK
+        int CompanyId FK
+        int SiteId FK
+        varchar Type "reunion | capacitacion"
+        varchar Title
+        date Date
+        text Attendees "resumen libre, heredado del prototipo"
+        text Notes
+        int CreatedByUserId FK
+        varchar Source "manual | teams | googlemeet | zoom"
+        varchar ExternalMeetingId "nullable, id en la plataforma origen"
+        varchar ExternalJoinUrl "nullable"
+        timestamptz SyncedAt "nullable, ultima sincronizacion"
+    }
+    MEETING_ATTENDEE {
+        int AttendeeId PK
+        int MinuteId FK
+        varchar Name
+        varchar Email "nullable"
+        timestamptz JoinTime "nullable"
+        timestamptz LeaveTime "nullable"
+        int DurationMinutes "nullable"
+    }
+    MEETING_CONTENT {
+        int MinuteId PK,FK
+        text Summary "nullable, resumen/transcripcion"
+        varchar RecordingUrl "nullable"
+        varchar ContentType "transcript | recording | summary"
+        timestamptz RetrievedAt
+    }
+    COURSE {
+        int CourseId PK
+        varchar Title
+        varchar Icon
+        text Summary
+    }
+    LESSON {
+        int LessonId PK
+        int CourseId FK
+        varchar Title
+        text ContentHtml
+        int OrderIndex
+    }
+    QUIZ_QUESTION {
+        int QuestionId PK
+        int CourseId FK
+        text Text
+    }
+    QUIZ_OPTION {
+        int OptionId PK
+        int QuestionId FK
+        text Text
+        boolean IsCorrect
+    }
+    USER_COURSE_PROGRESS {
+        int ProgressId PK
+        int UserId FK
+        int CourseId FK
+        int Score
+        boolean Passed
+        timestamptz CompletedAt
+    }
+    GAME_SESSION {
+        int GameSessionId PK
+        int UserId FK
+        int CorrectCount
+        int TotalQuestions
+        int Points
+        int BestStreak
+        timestamptz PlayedAt
+    }
+    BADGE {
+        int BadgeId PK
+        varchar Code UK
+        varchar Label
+        varchar Icon
+    }
+    USER_BADGE {
+        int UserId FK
+        int BadgeId FK
+        timestamptz EarnedAt
+    }
+    CHECKLIST_ITEM {
+        int ChecklistItemId PK
+        text Label
+    }
+    CHECKLIST_RESPONSE {
+        int ChecklistItemId PK,FK
+        boolean Checked
+        int UpdatedByUserId FK
+        timestamptz UpdatedAt
+    }
+    AUDIT_LOG {
+        bigint AuditLogId PK
+        int UserId FK "nullable"
+        varchar Action
+        text Detail
+        timestamptz Timestamp
+    }
+
+        int CourseId PK
+        varchar Title
+        varchar Icon
+        text Summary
+    }
+    LESSON {
+        int LessonId PK
+        int CourseId FK
+        varchar Title
+        text ContentHtml
+        int OrderIndex
+    }
+    QUIZ_QUESTION {
+        int QuestionId PK
+        int CourseId FK
+        text Text
+    }
+    QUIZ_OPTION {
+        int OptionId PK
+        int QuestionId FK
+        text Text
+        boolean IsCorrect
+    }
+    USER_COURSE_PROGRESS {
+        int ProgressId PK
+        int UserId FK
+        int CourseId FK
+        int Score
+        boolean Passed
+        timestamptz CompletedAt
+    }
+    GAME_SESSION {
+        int GameSessionId PK
+        int UserId FK
+        int CorrectCount
+        int TotalQuestions
+        int Points
+        int BestStreak
+        timestamptz PlayedAt
+    }
+    BADGE {
+        int BadgeId PK
+        varchar Code UK
+        varchar Label
+        varchar Icon
+    }
+    USER_BADGE {
+        int UserId FK
+        int BadgeId FK
+        timestamptz EarnedAt
+    }
+    CHECKLIST_ITEM {
+        int ChecklistItemId PK
+        text Label
+    }
+    CHECKLIST_RESPONSE {
+        int ChecklistItemId PK,FK
+        boolean Checked
+        int UpdatedByUserId FK
+        timestamptz UpdatedAt
+    }
+    AUDIT_LOG {
+        bigint AuditLogId PK
+        int UserId FK "nullable"
+        varchar Action
+        text Detail
+        timestamptz Timestamp
+    }

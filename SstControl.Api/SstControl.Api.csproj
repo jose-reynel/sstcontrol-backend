@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>sst-control-api</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SstControl.Application\SstControl.Application.csproj" />
+    <ProjectReference Include="..\SstControl.Infrastructure\SstControl.Infrastructure.csproj" />
+    <ProjectReference Include="..\SstControl.Integrations\SstControl.Integrations.csproj" />
+  </ItemGroup>
+</Project>
