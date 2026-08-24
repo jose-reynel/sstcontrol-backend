@@ -1,7 +1,9 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SstControl.Api.Seguridad;
 using SstControl.Aplicacion.Integraciones;
 using SstControl.Aplicacion.Interfaces;
 using SstControl.Infraestructura.Persistencia;
@@ -21,6 +23,7 @@ constructor.Services.AddScoped<IServicioDocumento, ServicioDocumento>();
 constructor.Services.AddScoped<IServicioEmpresa, ServicioEmpresa>();
 constructor.Services.AddScoped<IServicioActa, ServicioActa>();
 constructor.Services.AddScoped<IServicioAutenticacion, ServicioAutenticacion>();
+constructor.Services.AddScoped<IServicioControlAcceso, ServicioControlAcceso>();
 
 // ---- Capa de integraciones: conectores developer-level a Teams / Google Meet / Zoom ----
 constructor.Services.AddHttpClient<IConectorReunion, ConectorTeams>();
@@ -44,6 +47,12 @@ constructor.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(constructor.Configuration["Jwt:Key"]!)),
         };
     });
+
+// ---- Autorización por permiso (RBAC): cualquier [Authorize(Policy = "modulo.accion")]
+// se resuelve dinámicamente contra los claims "permiso" del JWT — ver
+// SstControl.Api.Seguridad.ProveedorPoliticasPermiso y ManejadorPermiso. ----
+constructor.Services.AddSingleton<IAuthorizationPolicyProvider, ProveedorPoliticasPermiso>();
+constructor.Services.AddSingleton<IAuthorizationHandler, ManejadorPermiso>();
 constructor.Services.AddAuthorization();
 
 constructor.Services.AddControllers();

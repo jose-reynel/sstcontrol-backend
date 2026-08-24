@@ -8,9 +8,10 @@ namespace SstControl.Api.Controladores;
 /// <summary>Datos para sincronizar manualmente una reunión externa hacia el sistema central.</summary>
 public record PeticionSincronizarReunion(string IdReunionExterna, int IdEmpresa, int IdSede, string Tipo);
 
-/// <summary>Sincronización on-demand de reuniones desde Teams, Google Meet o Zoom (solo administrador).</summary>
+/// <summary>Sincronización on-demand de reuniones desde Teams, Google Meet o Zoom.
+/// Requiere el permiso "reuniones.sincronizar".</summary>
 [ApiController]
-[Authorize(Roles = "admin")]
+[Authorize(Policy = "reuniones.sincronizar")]
 [Route("api/sincronizacion-reuniones")]
 public class SincronizacionReunionesControlador : ControllerBase
 {

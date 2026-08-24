@@ -20,5 +20,6 @@ public record ActaDto(int IdActa, int IdEmpresa, int IdSede, string Tipo, string
 public record CrearActaDto(int IdEmpresa, int IdSede, string Tipo, string Titulo, DateOnly Fecha,
     string? Asistentes, string? Notas);
 
-/// <summary>Resultado de un inicio de sesión exitoso: token JWT y datos básicos del usuario.</summary>
-public record ResultadoAutenticacionDto(string Token, string NombreCompleto, string Rol);
+/// <summary>Resultado de un inicio de sesión exitoso: token JWT y los roles/permisos
+/// efectivos del usuario (resultado de combinar Usuario → Rol → Perfil → Permiso).</summary>
+public record ResultadoAutenticacionDto(string Token, string NombreCompleto, List<string> Roles, List<string> Permisos);

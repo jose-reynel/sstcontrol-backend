@@ -1,4 +1,4 @@
-# SstControl — Backend (.NET 8 + EF Core + PostgreSQL)
+# SstControl — Backend (.NET 10 + EF Core + PostgreSQL)
 
 > **Convención de idioma:** todo el código (clases, propiedades, métodos, parámetros,
 > variables) está en **español**. Los nombres de proyecto/carpeta (`SstControl.Domain`,
@@ -22,7 +22,7 @@ las interfaces de Application. Api orquesta todo por inyección de dependencias
 (`Program.cs`). Así el dominio nunca queda acoplado a PostgreSQL ni a ASP.NET.
 
 ## Requisitos
-- .NET 8 SDK
+- .NET 10 SDK
 - Docker (para levantar PostgreSQL fácilmente) o una instancia PostgreSQL propia
 
 ## 1. Levantar PostgreSQL
