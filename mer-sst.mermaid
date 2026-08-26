@@ -1,207 +1,45 @@
 erDiagram
-    %% =========================================================================
-    %% CONTROL DE ACCESO (RBAC): Usuario <-> Rol <-> Perfil <-> Permiso, + Grupo
-    %% Permiso efectivo de un usuario = permisos de sus Roles + permisos de sus Grupos.
-    %% =========================================================================
-    USUARIO ||--o{ USUARIO_ROL : "tiene asignado"
-    ROL ||--o{ USUARIO_ROL : "es asignado a"
-    ROL }o--|| PERFIL : "usa"
-    PERFIL ||--o{ PERFIL_PERMISO : "otorga"
-    PERMISO ||--o{ PERFIL_PERMISO : "es otorgado por"
-    USUARIO ||--o{ USUARIO_GRUPO : "pertenece a"
-    GRUPO ||--o{ USUARIO_GRUPO : "agrupa"
-    GRUPO }o--o| PERFIL : "usa (opcional)"
+    MODULES ||--o{ PERMISSIONS : "contiene (1:N)"
+    ROLES ||--o{ ROLE_PERMISSIONS : "posee (1:N)"
+    PERMISSIONS ||--o{ ROLE_PERMISSIONS : "asignado a (1:N)"
+    USERS ||--o{ USER_ROLES : "posee (1:N)"
+    ROLES ||--o{ USER_ROLES : "asignado a (1:N)"
 
-    EMPRESA ||--o{ SEDE : "posee"
-    EMPRESA ||--o{ ACTA : "recibe"
-    SEDE ||--o{ ACTA : "ocurre en"
-    ACTA ||--o{ ASISTENTE_REUNION : "registra asistencia de"
-    ACTA ||--o| CONTENIDO_REUNION : "tiene contenido de"
-    TIPO_DOCUMENTO ||--o{ DOCUMENTO : "clasifica"
-    USUARIO ||--o{ DOCUMENTO : "aprueba (opcional)"
-    USUARIO ||--o{ ACTA : "registra"
-    CURSO ||--o{ LECCION : "contiene"
-    CURSO ||--o{ PREGUNTA_QUIZ : "evalua"
-    PREGUNTA_QUIZ ||--o{ OPCION_QUIZ : "ofrece"
-    USUARIO ||--o{ PROGRESO_CURSO_USUARIO : "avanza"
-    CURSO ||--o{ PROGRESO_CURSO_USUARIO : "es cursado en"
-    USUARIO ||--o{ SESION_JUEGO : "juega"
-    USUARIO ||--o{ INSIGNIA_USUARIO : "obtiene"
-    INSIGNIA ||--o{ INSIGNIA_USUARIO : "es otorgada en"
-    USUARIO ||--o{ RESPUESTA_CHECKLIST : "actualiza"
-    ITEM_CHECKLIST ||--|| RESPUESTA_CHECKLIST : "tiene"
-    USUARIO ||--o{ REGISTRO_AUDITORIA : "genera"
-
-    USUARIO {
-        int IdUsuario PK
-        varchar NombreUsuario UK
-        varchar ClaveHash
-        varchar NombreCompleto
-        boolean Activo
-        timestamptz FechaCreacion
-    }
-    ROL {
-        int IdRol PK
-        varchar Nombre UK "ej. admin, colaborador, supervisor"
-        text Descripcion "nullable"
-        int IdPerfil FK
-    }
-    USUARIO_ROL {
-        int IdUsuario PK,FK
-        int IdRol PK,FK
-        timestamptz FechaAsignacion
-    }
-    PERFIL {
-        int IdPerfil PK
-        varchar Nombre UK "ej. Perfil Operativo, Perfil Auditoria"
-        text Descripcion "nullable"
-    }
-    PERMISO {
-        int IdPermiso PK
-        varchar Codigo UK "formato modulo.accion, ej. documentos.firmar"
-        varchar Modulo
-        text Descripcion
-    }
-    PERFIL_PERMISO {
-        int IdPerfil PK,FK
-        int IdPermiso PK,FK
-    }
-    GRUPO {
-        int IdGrupo PK
-        varchar Nombre UK
-        text Descripcion "nullable"
-        int IdPerfil FK "nullable, permisos adicionales por grupo"
-    }
-    USUARIO_GRUPO {
-        int IdUsuario PK,FK
-        int IdGrupo PK,FK
-        timestamptz FechaAsignacion
+    MODULES {
+        string id PK
+        string name UK
+        string description
+        boolean is_active
+        datetime created_at
     }
 
-    EMPRESA {
-        int IdEmpresa PK
-        varchar Nombre
-        timestamptz FechaCreacion
+    PERMISSIONS {
+        string id PK
+        string module_id FK
+        string name
+        string code UK
+        string description
+        boolean is_active
+        datetime created_at
     }
-    SEDE {
-        int IdSede PK
-        int IdEmpresa FK
-        varchar Nombre
+
+    ROLES {
+        string id PK
+        string name UK
+        string description
+        boolean is_active
+        datetime created_at
+        datetime updated_at
     }
-    TIPO_DOCUMENTO {
-        int IdTipoDocumento PK
-        varchar Nombre
+
+    ROLE_PERMISSIONS {
+        string role_id PK_FK
+        string permission_id PK_FK
+        datetime assigned_at
     }
-    DOCUMENTO {
-        int IdDocumento PK
-        int IdTipoDocumento FK
-        int IdEmpresa FK "nullable"
-        int IdSede FK "nullable"
-        varchar NombreColaborador
-        varchar Actividad
-        date FechaCaptura
-        date FechaVencimiento
-        varchar Estado "pendiente | aprobado"
-        int IdUsuarioAprueba FK "nullable"
-        timestamptz FechaFirma "nullable"
-    }
-    ACTA {
-        int IdActa PK
-        int IdEmpresa FK
-        int IdSede FK
-        varchar Tipo "reunion | capacitacion"
-        varchar Titulo
-        date Fecha
-        text Asistentes "resumen libre, compatibilidad"
-        text Notas
-        int IdUsuarioCreador FK
-        varchar Origen "manual | teams | googlemeet | zoom"
-        varchar IdReunionExterna "nullable"
-        varchar UrlIngresoExterna "nullable"
-        timestamptz FechaSincronizacion "nullable"
-    }
-    ASISTENTE_REUNION {
-        int IdAsistente PK
-        int IdActa FK
-        varchar Nombre
-        varchar CorreoElectronico "nullable"
-        timestamptz HoraIngreso "nullable"
-        timestamptz HoraSalida "nullable"
-        int DuracionMinutos "nullable"
-    }
-    CONTENIDO_REUNION {
-        int IdActa PK,FK
-        text Resumen "nullable"
-        varchar UrlGrabacion "nullable"
-        varchar TipoContenido "transcript | recording | summary"
-        timestamptz FechaObtencion
-    }
-    CURSO {
-        int IdCurso PK
-        varchar Titulo
-        varchar Icono
-        text Resumen
-    }
-    LECCION {
-        int IdLeccion PK
-        int IdCurso FK
-        varchar Titulo
-        text ContenidoHtml
-        int Orden
-    }
-    PREGUNTA_QUIZ {
-        int IdPregunta PK
-        int IdCurso FK
-        text Texto
-    }
-    OPCION_QUIZ {
-        int IdOpcion PK
-        int IdPregunta FK
-        text Texto
-        boolean EsCorrecta
-    }
-    PROGRESO_CURSO_USUARIO {
-        int IdProgreso PK
-        int IdUsuario FK
-        int IdCurso FK
-        int Puntaje
-        boolean Aprobado
-        timestamptz FechaFinalizacion
-    }
-    SESION_JUEGO {
-        int IdSesionJuego PK
-        int IdUsuario FK
-        int CantidadCorrectas
-        int TotalPreguntas
-        int Puntos
-        int MejorRacha
-        timestamptz FechaJuego
-    }
-    INSIGNIA {
-        int IdInsignia PK
-        varchar Codigo UK
-        varchar Etiqueta
-        varchar Icono
-    }
-    INSIGNIA_USUARIO {
-        int IdUsuario PK,FK
-        int IdInsignia PK,FK
-        timestamptz FechaObtencion
-    }
-    ITEM_CHECKLIST {
-        int IdItemChecklist PK
-        text Etiqueta
-    }
-    RESPUESTA_CHECKLIST {
-        int IdItemChecklist PK,FK
-        boolean Marcado
-        int IdUsuarioActualiza FK
-        timestamptz FechaActualizacion
-    }
-    REGISTRO_AUDITORIA {
-        bigint IdRegistroAuditoria PK
-        int IdUsuario FK "nullable"
-        varchar Accion
-        text Detalle
-        timestamptz FechaHora
+
+    USER_ROLES {
+        string user_id PK_FK
+        string role_id PK_FK
+        datetime assigned_at
     }

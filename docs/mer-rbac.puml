@@ -1,0 +1,50 @@
+@startuml
+entity "modules" {
+    * id : VARCHAR(36) [PK]
+    --
+    * name : VARCHAR(100) [UQ]
+    description : VARCHAR(255)
+    * is_active : BOOLEAN
+    * created_at : TIMESTAMP
+}
+
+entity "permissions" {
+    * id : VARCHAR(36) [PK]
+    --
+    module_id : VARCHAR(36) [FK]
+    * name : VARCHAR(100)
+    * code : VARCHAR(100) [UQ]
+    description : VARCHAR(255)
+    * is_active : BOOLEAN
+    * created_at : TIMESTAMP
+}
+
+entity "roles" {
+    * id : VARCHAR(36) [PK]
+    --
+    * name : VARCHAR(50) [UQ]
+    description : VARCHAR(255)
+    * is_active : BOOLEAN
+    * created_at : TIMESTAMP
+    * updated_at : TIMESTAMP
+}
+
+entity "role_permissions" {
+    * role_id : VARCHAR(36) [PK, FK]
+    * permission_id : VARCHAR(36) [PK, FK]
+    --
+    * assigned_at : TIMESTAMP
+}
+
+entity "user_roles" {
+    * user_id : VARCHAR(36) [PK, FK]
+    * role_id : VARCHAR(36) [PK, FK]
+    --
+    * assigned_at : TIMESTAMP
+}
+
+modules ||--o{ permissions
+roles ||--|{ role_permissions
+permissions ||--|{ role_permissions
+roles ||--|{ user_roles
+@enduml
