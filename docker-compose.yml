@@ -1,29 +1,56 @@
 version: "3.9"
+
 services:
   postgres:
     image: postgres:16
     container_name: sst_control_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: sst_control
-      POSTGRES_USER: sst_user
-      POSTGRES_PASSWORD: CAMBIA_ESTA_CLAVE
+      POSTGRES_DB: ${POSTGRES_DB:-sst_control}
+      POSTGRES_USER: ${POSTGRES_USER:-sst_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en tu archivo .env}
     ports:
       - "5432:5432"
     volumes:
       - sst_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sst_user} -d ${POSTGRES_DB:-sst_control}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   api:
     build:
       context: .
       dockerfile: SstControl.Api/Dockerfile
     container_name: sst_control_api
+    restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        # Espera a que Postgres esté realmente listo para aceptar conexiones,
+        # no solo a que el contenedor haya arrancado (evita el clásico error
+        # de "conexión rechazada" en el primer intento de EF Core).
+        condition: service_healthy
     environment:
-      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=sst_control;Username=sst_user;Password=CAMBIA_ESTA_CLAVE"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-sst_control};Username=${POSTGRES_USER:-sst_user};Password=${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en tu archivo .env}"
+      Jwt__Key: ${JWT_KEY:?Define JWT_KEY (mínimo 32 caracteres) en tu archivo .env}
+      Jwt__Issuer: ${JWT_ISSUER:-SstControlApi}
+      Jwt__Audience: ${JWT_AUDIENCE:-SstControlPwa}
+      # Lista de orígenes separada por comas — se traduce a las variables
+      # indexadas Cors__AllowedOrigins__0, __1... que espera la configuración
+      # jerárquica de .NET (ver entrypoint.sh más abajo si prefieres pasarlas
+      # directamente así: Cors__AllowedOrigins__0=https://tu-dominio).
+      Cors__AllowedOrigins__0: ${CORS_ORIGEN_PRINCIPAL:-https://jose-reynel.github.io}
     ports:
       - "5080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/salud"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   sst_pgdata:

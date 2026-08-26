@@ -43,10 +43,12 @@ public class ActasControlador : ControllerBase
     private readonly IServicioActa _servicioActa;
     public ActasControlador(IServicioActa servicioActa) => _servicioActa = servicioActa;
 
-    /// <summary>GET /api/actas — lista todas las actas, más recientes primero.</summary>
+    /// <summary>GET /api/actas?pagina=1&amp;tamanioPagina=20 — lista actas paginadas,
+    /// más recientes primero.</summary>
     [HttpGet]
     [Authorize(Policy = "actas.ver")]
-    public async Task<ActionResult<IReadOnlyList<ActaDto>>> ObtenerTodas() => Ok(await _servicioActa.ObtenerTodasAsync());
+    public async Task<ActionResult<PaginaDto<ActaDto>>> ObtenerTodas([FromQuery] int pagina = 1, [FromQuery] int tamanioPagina = 20) =>
+        Ok(await _servicioActa.ObtenerPaginadoAsync(pagina, tamanioPagina));
 
     /// <summary>POST /api/actas — registra una nueva acta (reunión o capacitación).</summary>
     [HttpPost]

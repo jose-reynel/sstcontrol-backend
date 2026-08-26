@@ -8,7 +8,9 @@ namespace SstControl.Aplicacion.Interfaces;
 /// </summary>
 public interface IServicioDocumento
 {
-    Task<IReadOnlyList<DocumentoDto>> ObtenerTodosAsync();
+    /// <summary>Lista paginada (más reciente primero) — evita traer toda la tabla
+    /// en una sola respuesta a medida que crece el histórico documental.</summary>
+    Task<PaginaDto<DocumentoDto>> ObtenerPaginadoAsync(int pagina, int tamanioPagina);
     Task<DocumentoDto> CrearAsync(CrearDocumentoDto datos);
 
     /// <summary>Marca el documento como aprobado y registra quién lo firmó.</summary>
@@ -32,7 +34,7 @@ public interface IServicioEmpresa
 /// <summary>Gestión de actas de reuniones y capacitaciones.</summary>
 public interface IServicioActa
 {
-    Task<IReadOnlyList<ActaDto>> ObtenerTodasAsync();
+    Task<PaginaDto<ActaDto>> ObtenerPaginadoAsync(int pagina, int tamanioPagina);
     Task<ActaDto> CrearAsync(CrearActaDto datos, int idUsuarioCreador);
 }
 

@@ -14,9 +14,12 @@ public class DocumentosControlador : ControllerBase
     private readonly IServicioDocumento _servicioDocumento;
     public DocumentosControlador(IServicioDocumento servicioDocumento) => _servicioDocumento = servicioDocumento;
 
-    /// <summary>GET /api/documentos — lista todos los documentos.</summary>
+    /// <summary>GET /api/documentos?pagina=1&amp;tamanioPagina=20 — lista documentos
+    /// paginados, del más reciente al más antiguo. El tamaño de página se limita
+    /// a 100 elementos por consulta.</summary>
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<DocumentoDto>>> ObtenerTodos() => Ok(await _servicioDocumento.ObtenerTodosAsync());
+    public async Task<ActionResult<PaginaDto<DocumentoDto>>> ObtenerTodos([FromQuery] int pagina = 1, [FromQuery] int tamanioPagina = 20) =>
+        Ok(await _servicioDocumento.ObtenerPaginadoAsync(pagina, tamanioPagina));
 
     /// <summary>POST /api/documentos — registra un nuevo documento (queda pendiente de firma).</summary>
     [HttpPost]

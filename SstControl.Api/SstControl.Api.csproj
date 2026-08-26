@@ -8,6 +8,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <!-- Logging estructurado: cada línea es JSON con contexto (ruta, id de rastreo,
+         usuario, duración) en vez de texto plano — necesario para poder buscar y
+         correlacionar eventos en cualquier stack de observabilidad real (Seq,
+         Grafana Loki, ELK, Datadog, etc.). Versión fija en 8.x porque el
+         versionado de Serilog no sigue al TFM de .NET como sí lo hace Microsoft.*. -->
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SstControl.Application\SstControl.Application.csproj" />

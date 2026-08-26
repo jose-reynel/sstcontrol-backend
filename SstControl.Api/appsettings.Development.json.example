@@ -1,0 +1,17 @@
+{
+  "_comentario": "Solo para desarrollo local — nunca se versiona con datos reales; ver .gitignore. Sobreescribe appsettings.json cuando ASPNETCORE_ENVIRONMENT=Development.",
+  "ConnectionStrings": {
+    "Default": "Host=localhost;Port=5432;Database=sst_control;Username=sst_user;Password=CAMBIA_ESTA_CLAVE"
+  },
+  "Cors": {
+    "AllowedOrigins": [
+      "https://localhost:5210",
+      "http://localhost:5211",
+      "https://10.0.2.2:5080",
+      "https://jose-reynel.github.io"
+    ]
+  },
+  "Serilog": {
+    "MinimumLevel": { "Default": "Debug" }
+  }
+}

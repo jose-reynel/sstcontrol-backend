@@ -57,9 +57,10 @@ public class ServicioAutenticacion : IServicioAutenticacion
 
         var llave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuracion["Jwt:Key"]!));
         var credenciales = new SigningCredentials(llave, SecurityAlgorithms.HmacSha256);
+        var minutosExpiracion = int.TryParse(_configuracion["Jwt:MinutosExpiracion"], out var valor) ? valor : 480;
         var token = new JwtSecurityToken(
             issuer: _configuracion["Jwt:Issuer"], audience: _configuracion["Jwt:Audience"],
-            claims: reclamos, expires: DateTime.UtcNow.AddHours(8), signingCredentials: credenciales);
+            claims: reclamos, expires: DateTime.UtcNow.AddMinutes(minutosExpiracion), signingCredentials: credenciales);
 
         return new ResultadoAutenticacionDto(new JwtSecurityTokenHandler().WriteToken(token),
             usuario.NombreCompleto, nombresRoles, codigosPermiso);

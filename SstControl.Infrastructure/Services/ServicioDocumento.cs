@@ -15,18 +15,36 @@ public class ServicioDocumento : IServicioDocumento
     private readonly ContextoBaseDatos _contexto;
     public ServicioDocumento(ContextoBaseDatos contexto) => _contexto = contexto;
 
-    /// <summary>Lista todos los documentos, del más reciente al más antiguo.</summary>
-    public async Task<IReadOnlyList<DocumentoDto>> ObtenerTodosAsync()
+    /// <summary>Lista paginada de documentos, del más reciente al más antiguo.
+    /// El conteo total y la página se resuelven en dos consultas independientes
+    /// (Count + Skip/Take) para que Postgres pueda optimizar cada una por
+    /// separado en vez de forzar un solo plan de consulta más costoso.</summary>
+    public async Task<PaginaDto<DocumentoDto>> ObtenerPaginadoAsync(int pagina, int tamanioPagina)
     {
-        return await _contexto.Documentos
+        (pagina, tamanioPagina) = NormalizarPaginacion(pagina, tamanioPagina);
+
+        var consulta = _contexto.Documentos.AsNoTracking()
             .Include(d => d.TipoDocumento)
             .Include(d => d.UsuarioAprueba)
-            .OrderByDescending(d => d.IdDocumento)
+            .OrderByDescending(d => d.IdDocumento);
+
+        var total = await consulta.CountAsync();
+        var elementos = await consulta
+            .Skip((pagina - 1) * tamanioPagina)
+            .Take(tamanioPagina)
             .Select(d => new DocumentoDto(d.IdDocumento, d.TipoDocumento.Nombre, d.NombreColaborador, d.Actividad,
                 d.FechaCaptura, d.FechaVencimiento, d.Estado.ToString(),
                 d.UsuarioAprueba != null ? d.UsuarioAprueba.NombreCompleto : null))
             .ToListAsync();
+
+        return new PaginaDto<DocumentoDto>(elementos, pagina, tamanioPagina, total);
     }
+
+    /// <summary>Aplica límites razonables: página mínima 1, tamaño entre 1 y 100 —
+    /// evita que un cliente mal configurado (o malicioso) pida páginas de tamaño
+    /// arbitrario y degrade la base de datos.</summary>
+    private static (int Pagina, int TamanioPagina) NormalizarPaginacion(int pagina, int tamanioPagina) =>
+        (Math.Max(1, pagina), Math.Clamp(tamanioPagina, 1, 100));
 
     /// <summary>Registra un nuevo documento — queda como "pendiente" hasta que se firme.</summary>
     public async Task<DocumentoDto> CrearAsync(CrearDocumentoDto datos)

@@ -4,3 +4,6 @@ obj/
 .vs/
 appsettings.Development.json
 appsettings.Production.json
+
+# Variables de entorno reales para docker-compose (nunca se versionan)
+.env

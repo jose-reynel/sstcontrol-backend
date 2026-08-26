@@ -45,13 +45,25 @@ public class ServicioActa : IServicioActa
     private readonly ContextoBaseDatos _contexto;
     public ServicioActa(ContextoBaseDatos contexto) => _contexto = contexto;
 
-    public async Task<IReadOnlyList<ActaDto>> ObtenerTodasAsync()
+    /// <summary>Lista paginada de actas, de la más reciente a la más antigua.</summary>
+    public async Task<PaginaDto<ActaDto>> ObtenerPaginadoAsync(int pagina, int tamanioPagina)
     {
-        return await _contexto.Actas.Include(a => a.UsuarioCreador)
-            .OrderByDescending(a => a.Fecha)
+        pagina = Math.Max(1, pagina);
+        tamanioPagina = Math.Clamp(tamanioPagina, 1, 100);
+
+        var consulta = _contexto.Actas.AsNoTracking()
+            .Include(a => a.UsuarioCreador)
+            .OrderByDescending(a => a.Fecha);
+
+        var total = await consulta.CountAsync();
+        var elementos = await consulta
+            .Skip((pagina - 1) * tamanioPagina)
+            .Take(tamanioPagina)
             .Select(a => new ActaDto(a.IdActa, a.IdEmpresa, a.IdSede, a.Tipo.ToString(), a.Titulo, a.Fecha,
                 a.Asistentes, a.Notas, a.UsuarioCreador.NombreCompleto))
             .ToListAsync();
+
+        return new PaginaDto<ActaDto>(elementos, pagina, tamanioPagina, total);
     }
 
     public async Task<ActaDto> CrearAsync(CrearActaDto datos, int idUsuarioCreador)

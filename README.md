@@ -41,10 +41,20 @@ Esto crea todas las tablas del MER (`mer-sst.mermaid`) en PostgreSQL respetando 
 cardinalidades configuradas en `SstControlDbContext.OnModelCreating`.
 
 ## 3. Configurar credenciales
-Antes de correr en producción, reemplaza en `appsettings.json`:
-- `ConnectionStrings:Default` → usuario/clave reales de PostgreSQL
-- `Jwt:Key` → una clave secreta larga y aleatoria
-- `Cors:AllowedOrigin` → el dominio real donde publiques la PWA
+
+**Desarrollo local (sin Docker):** copia `SstControl.Api/appsettings.Development.json.example`
+a `SstControl.Api/appsettings.Development.json` (ignorado por git) y ajusta los valores.
+
+**Con `docker compose`:** copia `.env.example` a `.env` (ignorado por git) y completa
+`POSTGRES_PASSWORD`, `JWT_KEY` (mínimo 32 caracteres — genera uno con `openssl rand -base64 48`)
+y `CORS_ORIGEN_PRINCIPAL`. `docker-compose.yml` ya no trae contraseñas ni llaves por defecto:
+sin `.env` completo, `docker compose up` falla explícitamente en vez de arrancar con un
+secreto débil.
+
+- `Cors:AllowedOrigins` acepta **varios orígenes** (array) — agrega ahí tanto tu dominio
+  de producción como los puertos de desarrollo del frontend (Web y emulador Maui).
+- `Jwt:MinutosExpiracion` controla cuánto dura la sesión antes de requerir volver a
+  iniciar sesión (por defecto 480 = 8 horas).
 
 **Nunca subas `appsettings.json` con claves reales a un repo público** — usa
 `dotnet user-secrets` en desarrollo o variables de entorno en producción.
@@ -53,24 +63,43 @@ Antes de correr en producción, reemplaza en `appsettings.json`:
 ```bash
 dotnet run --project SstControl.Api
 ```
-Swagger disponible en `https://localhost:xxxx/swagger`.
+Swagger disponible en `https://localhost:xxxx/swagger`. Estado de salud (usado por
+`docker-compose.yml` y por cualquier orquestador) en `GET /salud`.
 
-## 5. Conectar la PWA
-En `app.js` de la PWA, reemplaza las llamadas a `localStorage`/`sessionStorage` por
-`fetch()` contra estos endpoints, por ejemplo:
+## 5. Frontend
 
-```js
-const res = await fetch("https://tu-api.com/api/auth/login", {
-  method: "POST", headers: {"Content-Type":"application/json"},
-  body: JSON.stringify({ username, password })
-});
-const { token, fullName, role } = await res.json();
-// guarda el token y agrégalo como header Authorization: Bearer <token> en cada fetch
-```
+El cliente de esta API es **[sstcontrol-frontend](https://github.com/jose-reynel/sstcontrol-frontend)**
+— una app Blazor (.NET 10) compartida entre Web (WebAssembly/PWA) y Mobile/Desktop
+(.NET MAUI Blazor Hybrid: Android, iOS, macOS, Windows). Los DTOs de
+`SstControl.Application/DTOs/Dtos.cs` son el contrato — cualquier cambio ahí debe
+reflejarse en `SstControl.Frontend.Shared/Models` del frontend.
 
-Esto es un cambio de arquitectura real (de app 100% cliente a app cliente-servidor) —
-no es un simple reemplazo de una función; conviene hacerlo módulo por módulo
-(primero Auth, luego Documentos, luego Actas, etc.) probando cada uno.
+## Robustecimiento técnico (observabilidad, seguridad, escalabilidad)
+
+Además del CRUD funcional, la API incluye:
+
+- **Manejo global de errores** (`SstControl.Api/Middleware/ManejadorErroresGlobal.cs`):
+  toda excepción no controlada se traduce a `application/problem+json` (RFC 7807) con
+  un `idRastreo` correlacionable con los logs — nunca un HTML genérico de error 500.
+- **Logging estructurado** con Serilog (JSON a consola, listo para conectar a Seq,
+  Grafana Loki, ELK o Datadog) — configurable por `appsettings.json` → `Serilog`.
+- **Health check real** en `GET /salud`: verifica conectividad efectiva a PostgreSQL
+  (no solo que el proceso esté vivo), en JSON.
+- **Rate limiting**: 5 intentos por minuto por IP en `POST /api/autenticacion/iniciar-sesion`
+  (mitiga fuerza bruta de credenciales) y un límite general de 200 peticiones/minuto por IP.
+- **Validación de entrada** (`DataAnnotations` en los DTOs `Crear*`): la API responde 400
+  con `ValidationProblemDetails` antes de tocar la base de datos si faltan campos o exceden
+  longitudes razonables.
+- **Paginación** en `GET /api/documentos` y `GET /api/actas` (`?pagina=1&tamanioPagina=20`,
+  máximo 100 por página) — evita traer la tabla completa a medida que crece el histórico.
+- **CORS multi-origen** configurable por array, no un solo string fijo.
+
+Pendiente conocido, no implementado todavía (para no romper el contrato actual del
+frontend sin coordinarlo primero): **refresh tokens** (hoy el usuario debe volver a
+iniciar sesión al expirar el JWT), **versionado de rutas de API** (`/api/v2/...` cuando
+haya un cambio incompatible), y **tests automatizados** (el workflow de CI ya corre
+`dotnet test`, pero todavía no existe ningún proyecto `*.Tests`).
+
 
 ## Alcance de este scaffold
 Se implementaron completos como ejemplo: **Auth, Documentos, Empresas/Sedes, Actas**.
