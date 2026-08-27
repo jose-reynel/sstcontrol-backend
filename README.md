@@ -53,8 +53,9 @@ secreto débil.
 
 - `Cors:AllowedOrigins` acepta **varios orígenes** (array) — agrega ahí tanto tu dominio
   de producción como los puertos de desarrollo del frontend (Web y emulador Maui).
-- `Jwt:MinutosExpiracion` controla cuánto dura la sesión antes de requerir volver a
-  iniciar sesión (por defecto 480 = 8 horas).
+- `Jwt:MinutosExpiracion` controla cuánto dura el JWT antes de necesitar renovarse
+  (por defecto 480 = 8 horas) y `Jwt:DiasVigenciaTokenRenovacion` cuánto dura la
+  sesión completa antes de pedir la contraseña de nuevo (por defecto 30 días).
 
 **Nunca subas `appsettings.json` con claves reales a un repo público** — usa
 `dotnet user-secrets` en desarrollo o variables de entorno en producción.
@@ -93,10 +94,18 @@ Además del CRUD funcional, la API incluye:
 - **Paginación** en `GET /api/documentos` y `GET /api/actas` (`?pagina=1&tamanioPagina=20`,
   máximo 100 por página) — evita traer la tabla completa a medida que crece el histórico.
 - **CORS multi-origen** configurable por array, no un solo string fijo.
+- **Refresh tokens con rotación** (`TokenRenovacion`, tabla nueva — genera la
+  migración con `dotnet ef migrations add`): el login devuelve un JWT de corta
+  duración + un token de renovación opaco de larga duración. `POST
+  /api/autenticacion/renovar-token` cambia un token de renovación vigente por
+  un JWT nuevo (y un token de renovación nuevo — el usado queda revocado). Si
+  alguien reutiliza un token de renovación ya revocado (señal de robo), se
+  revocan TODOS los tokens activos de ese usuario. `POST
+  /api/autenticacion/cerrar-sesion` revoca el token del lado del servidor —
+  antes "cerrar sesión" solo borraba el token en el cliente.
 
-Pendiente conocido, no implementado todavía (para no romper el contrato actual del
-frontend sin coordinarlo primero): **refresh tokens** (hoy el usuario debe volver a
-iniciar sesión al expirar el JWT), **versionado de rutas de API** (`/api/v2/...` cuando
+Pendiente conocido, no implementado todavía: **versionado de rutas de API**
+(`/api/v2/...` cuando
 haya un cambio incompatible), y **tests automatizados** (el workflow de CI ya corre
 `dotnet test`, pero todavía no existe ningún proyecto `*.Tests`).
 

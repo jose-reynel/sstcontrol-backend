@@ -23,6 +23,7 @@ public class ContextoBaseDatos : DbContext
     public DbSet<UsuarioGrupo> UsuarioGrupos => Set<UsuarioGrupo>();
     public DbSet<UsuarioRol> UsuarioRoles => Set<UsuarioRol>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<TokenRenovacion> TokensRenovacion => Set<TokenRenovacion>();
 
     // ---- Organización cliente ----
     public DbSet<Empresa> Empresas => Set<Empresa>();
@@ -114,6 +115,14 @@ public class ContextoBaseDatos : DbContext
         modelo.Entity<Grupo>()
             .HasOne(g => g.Empresa).WithMany(e => e.Grupos)
             .HasForeignKey(g => g.IdEmpresa).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
+
+        // USUARIO (1) --- (N) TOKEN_RENOVACION — historial de tokens de renovación
+        // (rotados en cada uso); se conserva para poder detectar reutilización de
+        // un token ya rotado (indicio de robo) en vez de borrarlo al usarse.
+        modelo.Entity<TokenRenovacion>().HasIndex(t => t.Token).IsUnique();
+        modelo.Entity<TokenRenovacion>()
+            .HasOne(t => t.Usuario).WithMany(u => u.TokensRenovacion)
+            .HasForeignKey(t => t.IdUsuario).OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigurarOrganizacionCliente(ModelBuilder modelo)

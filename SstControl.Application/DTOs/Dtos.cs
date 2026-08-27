@@ -41,9 +41,11 @@ public record CrearActaDto(
     [property: MaxLength(2000)] string? Asistentes,
     [property: MaxLength(4000)] string? Notas);
 
-/// <summary>Resultado de un inicio de sesión exitoso: token JWT y los roles/permisos
-/// efectivos del usuario (resultado de combinar Usuario → Rol → Perfil → Permiso).</summary>
-public record ResultadoAutenticacionDto(string Token, string NombreCompleto, List<string> Roles, List<string> Permisos);
+/// <summary>Resultado de un inicio de sesión (o renovación) exitoso: el JWT de
+/// corta duración para llamar a la API, el token de renovación de larga duración
+/// (opaco, no es un JWT) para obtener un JWT nuevo sin pedir la contraseña de
+/// nuevo, y los roles/permisos efectivos del usuario.</summary>
+public record ResultadoAutenticacionDto(string Token, string TokenRenovacion, string NombreCompleto, List<string> Roles, List<string> Permisos);
 
 /// <summary>
 /// Envoltorio genérico de paginación para listas que pueden crecer sin límite

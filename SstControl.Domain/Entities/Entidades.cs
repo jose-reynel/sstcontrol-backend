@@ -142,6 +142,37 @@ public class Usuario
     public ICollection<SesionJuego> SesionesJuego { get; set; } = new List<SesionJuego>();
     public ICollection<InsigniaUsuario> Insignias { get; set; } = new List<InsigniaUsuario>();
     public ICollection<RegistroAuditoria> RegistrosAuditoria { get; set; } = new List<RegistroAuditoria>();
+    public ICollection<TokenRenovacion> TokensRenovacion { get; set; } = new List<TokenRenovacion>();
+}
+
+/// <summary>
+/// Token de larga duración usado exclusivamente para obtener un nuevo JWT sin
+/// pedir la contraseña de nuevo (endpoint POST /api/autenticacion/renovar-token).
+/// Se guarda con rotación: cada uso emite un token nuevo y revoca el usado
+/// (<see cref="Revocado"/> + <see cref="ReemplazadoPor"/>), de forma que un
+/// token robado que ya fue usado por el dueño legítimo queda inservible — si
+/// alguien intenta reusarlo, se detecta la reutilización.
+/// </summary>
+public class TokenRenovacion
+{
+    public int IdTokenRenovacion { get; set; }
+
+    /// <summary>Valor aleatorio opaco (no es un JWT) — se genera con RandomNumberGenerator.</summary>
+    public string Token { get; set; } = default!;
+
+    public int IdUsuario { get; set; }
+    public Usuario Usuario { get; set; } = default!;
+
+    public DateTimeOffset FechaCreacion { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset FechaExpiracion { get; set; }
+    public DateTimeOffset? FechaRevocacion { get; set; }
+
+    /// <summary>Token que lo reemplazó al usarse (null mientras siga vigente).</summary>
+    public string? ReemplazadoPor { get; set; }
+
+    public bool Revocado => FechaRevocacion is not null;
+    public bool Expirado => DateTimeOffset.UtcNow >= FechaExpiracion;
+    public bool Vigente => !Revocado && !Expirado;
 }
 
 // =========================================================================

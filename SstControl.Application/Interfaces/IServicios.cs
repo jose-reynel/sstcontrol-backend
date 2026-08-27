@@ -42,4 +42,14 @@ public interface IServicioActa
 public interface IServicioAutenticacion
 {
     Task<ResultadoAutenticacionDto?> IniciarSesionAsync(string nombreUsuario, string clave);
+
+    /// <summary>Cambia un token de renovación vigente por un JWT nuevo + un token
+    /// de renovación nuevo (rotación) — null si el token no existe, ya expiró, o
+    /// ya fue usado antes (en cuyo caso además se revocan todos los tokens
+    /// activos de ese usuario, ver implementación).</summary>
+    Task<ResultadoAutenticacionDto?> RenovarTokenAsync(string tokenRenovacion);
+
+    /// <summary>Revoca un token de renovación específico — cierre de sesión real
+    /// del lado del servidor, no solo borrar el token en el cliente.</summary>
+    Task CerrarSesionAsync(string tokenRenovacion);
 }
