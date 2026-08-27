@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>SstControl.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <!-- Mismo número de versión que el resto de paquetes Microsoft.EntityFrameworkCore.*
+         del repo (10.0.0) — el proveedor en memoria permite probar consultas LINQ
+         reales (paginación, conteos) sin necesitar PostgreSQL en el pipeline de CI. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0" />
+    <!-- Para construir un IConfiguration de prueba (ConfigurationBuilder +
+         AddInMemoryCollection) sin depender de qué traiga transitivamente
+         SstControl.Infrastructure. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SstControl.Application\SstControl.Application.csproj" />
+    <ProjectReference Include="..\SstControl.Infrastructure\SstControl.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

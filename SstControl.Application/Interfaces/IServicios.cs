@@ -11,6 +11,11 @@ public interface IServicioDocumento
     /// <summary>Lista paginada (más reciente primero) — evita traer toda la tabla
     /// en una sola respuesta a medida que crece el histórico documental.</summary>
     Task<PaginaDto<DocumentoDto>> ObtenerPaginadoAsync(int pagina, int tamanioPagina);
+
+    /// <summary>Conteos agregados (total, pendientes, vencidos, aprobados) — para
+    /// paneles/resúmenes, sin traer los documentos en sí.</summary>
+    Task<ResumenDocumentosDto> ObtenerResumenAsync();
+
     Task<DocumentoDto> CrearAsync(CrearDocumentoDto datos);
 
     /// <summary>Marca el documento como aprobado y registra quién lo firmó.</summary>

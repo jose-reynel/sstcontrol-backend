@@ -21,6 +21,12 @@ public class DocumentosControlador : ControllerBase
     public async Task<ActionResult<PaginaDto<DocumentoDto>>> ObtenerTodos([FromQuery] int pagina = 1, [FromQuery] int tamanioPagina = 20) =>
         Ok(await _servicioDocumento.ObtenerPaginadoAsync(pagina, tamanioPagina));
 
+    /// <summary>GET /api/documentos/resumen — conteos agregados (total, pendientes,
+    /// vencidos, aprobados) calculados en la base de datos. Pensado para paneles:
+    /// evita que el cliente tenga que traer todos los documentos solo para contarlos.</summary>
+    [HttpGet("resumen")]
+    public async Task<ActionResult<ResumenDocumentosDto>> ObtenerResumen() => Ok(await _servicioDocumento.ObtenerResumenAsync());
+
     /// <summary>POST /api/documentos — registra un nuevo documento (queda pendiente de firma).</summary>
     [HttpPost]
     public async Task<ActionResult<DocumentoDto>> Crear(CrearDocumentoDto datos) => Ok(await _servicioDocumento.CrearAsync(datos));

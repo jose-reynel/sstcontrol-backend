@@ -46,6 +46,21 @@ public class ServicioDocumento : IServicioDocumento
     private static (int Pagina, int TamanioPagina) NormalizarPaginacion(int pagina, int tamanioPagina) =>
         (Math.Max(1, pagina), Math.Clamp(tamanioPagina, 1, 100));
 
+    /// <summary>Conteos agregados calculados con COUNT en la base de datos — nunca
+    /// trae los documentos a memoria solo para contarlos.</summary>
+    public async Task<ResumenDocumentosDto> ObtenerResumenAsync()
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var consulta = _contexto.Documentos.AsNoTracking();
+
+        var total = await consulta.CountAsync();
+        var aprobados = await consulta.CountAsync(d => d.Estado == EstadoDocumento.Aprobado);
+        var vencidos = await consulta.CountAsync(d => d.Estado == EstadoDocumento.Pendiente && d.FechaVencimiento < hoy);
+        var pendientes = await consulta.CountAsync(d => d.Estado == EstadoDocumento.Pendiente && d.FechaVencimiento >= hoy);
+
+        return new ResumenDocumentosDto(total, pendientes, vencidos, aprobados);
+    }
+
     /// <summary>Registra un nuevo documento — queda como "pendiente" hasta que se firme.</summary>
     public async Task<DocumentoDto> CrearAsync(CrearDocumentoDto datos)
     {

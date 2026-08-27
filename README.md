@@ -93,6 +93,9 @@ Además del CRUD funcional, la API incluye:
   longitudes razonables.
 - **Paginación** en `GET /api/documentos` y `GET /api/actas` (`?pagina=1&tamanioPagina=20`,
   máximo 100 por página) — evita traer la tabla completa a medida que crece el histórico.
+- **Resumen agregado** en `GET /api/documentos/resumen` (total, pendientes, vencidos,
+  aprobados) calculado con `COUNT` en la base de datos — para paneles, sin traer
+  los documentos en sí.
 - **CORS multi-origen** configurable por array, no un solo string fijo.
 - **Refresh tokens con rotación** (`TokenRenovacion`, tabla nueva — genera la
   migración con `dotnet ef migrations add`): el login devuelve un JWT de corta
@@ -103,11 +106,13 @@ Además del CRUD funcional, la API incluye:
   revocan TODOS los tokens activos de ese usuario. `POST
   /api/autenticacion/cerrar-sesion` revoca el token del lado del servidor —
   antes "cerrar sesión" solo borraba el token en el cliente.
+- **Tests automatizados** (`SstControl.Tests`, xUnit + EF Core InMemory):
+  cubren la paginación y el resumen agregado de Documentos, y el flujo completo
+  de refresh tokens (emisión, rotación, y la revocación en cadena ante reuso de
+  un token ya rotado). Corre `dotnet test` desde la raíz del repo.
 
 Pendiente conocido, no implementado todavía: **versionado de rutas de API**
-(`/api/v2/...` cuando
-haya un cambio incompatible), y **tests automatizados** (el workflow de CI ya corre
-`dotnet test`, pero todavía no existe ningún proyecto `*.Tests`).
+(`/api/v2/...` cuando haya un cambio incompatible).
 
 
 ## Alcance de este scaffold

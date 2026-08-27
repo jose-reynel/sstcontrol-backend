@@ -47,6 +47,11 @@ public record CrearActaDto(
 /// nuevo, y los roles/permisos efectivos del usuario.</summary>
 public record ResultadoAutenticacionDto(string Token, string TokenRenovacion, string NombreCompleto, List<string> Roles, List<string> Permisos);
 
+/// <summary>Conteos agregados del ciclo documental, calculados en la base de datos
+/// (no en el cliente) — así el Panel no necesita traer todos los documentos para
+/// mostrar cifras correctas, sin importar cuántos miles haya.</summary>
+public record ResumenDocumentosDto(int Total, int Pendientes, int Vencidos, int Aprobados);
+
 /// <summary>
 /// Envoltorio genérico de paginación para listas que pueden crecer sin límite
 /// (documentos, actas). Evita traer miles de filas en una sola respuesta —
