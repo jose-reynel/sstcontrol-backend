@@ -11,6 +11,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <!-- Wrapper .NET (P/Invoke) sobre el motor Tesseract OCR — requiere el binario
+         nativo tesseract-ocr instalado en el contenedor (ver SstControl.Api/Dockerfile)
+         y los archivos de idioma (tessdata/spa.traineddata, eng.traineddata). Versión
+         no verificable contra NuGet en este entorno (sin acceso a api.nuget.org);
+         5.2.0 es la última estable ampliamente usada al momento de escribir esto —
+         confírmala con "dotnet add package Tesseract" localmente si falla la restauración. -->
+    <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SstControl.Application\SstControl.Application.csproj" />

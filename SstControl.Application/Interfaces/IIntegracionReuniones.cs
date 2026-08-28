@@ -1,7 +1,7 @@
 namespace SstControl.Aplicacion.Integraciones;
 
 /// <summary>Plataformas de reunión soportadas. El valor debe coincidir con OrigenReunion en Dominio.</summary>
-public enum ProveedorReunion { Teams, GoogleMeet, Zoom }
+public enum ProveedorReunion { Teams, GoogleMeet, Zoom, Webex }
 
 /// <summary>Datos generales de una reunión traídos desde la plataforma externa.</summary>
 public record ReunionExternaDto(string IdReunionExterna, string Titulo, DateTimeOffset FechaInicio,
@@ -12,6 +12,31 @@ public record AsistenteExternoDto(string Nombre, string? CorreoElectronico, Date
 
 /// <summary>Contenido adicional de la reunión (resumen/transcripción o grabación), si existe.</summary>
 public record ContenidoExternoDto(string? Resumen, string? UrlGrabacion, string TipoContenido);
+
+// ---- Bot de minutas: interpretación del contenido de una reunión ----
+
+/// <summary>Compromiso/acuerdo candidato detectado en el texto de una reunión.</summary>
+public record CompromisoExtraidoDto(string Descripcion, string? Responsable, DateOnly? FechaLimite);
+
+/// <summary>Resultado de interpretar el contenido textual de una reunión: un
+/// extracto/vista previa del texto fuente y los compromisos candidatos detectados.</summary>
+public record MinutaExtraidaDto(string? Resumen, IReadOnlyList<CompromisoExtraidoDto> Compromisos);
+
+/// <summary>
+/// Puerto de extracción de minutas: dado el texto fuente de una reunión (la
+/// transcripción o el resumen que el conector correspondiente ya dejó en
+/// ContenidoReunion), produce un extracto y una lista de compromisos candidatos.
+/// La implementación por defecto (ver ServicioResumenReunionHeuristico en
+/// Infrastructure) usa reglas/patrones de texto — NO es un modelo de lenguaje, no
+/// "entiende" la reunión. Es, a propósito, el punto de extensión para poder
+/// enchufar más adelante un proveedor de IA real (ej. la API de Anthropic) sin
+/// tocar nada de quien consume esta interfaz — solo cambiaría el registro en
+/// Program.cs.
+/// </summary>
+public interface IServicioResumenReunion
+{
+    MinutaExtraidaDto ExtraerMinuta(string textoFuente);
+}
 
 /// <summary>
 /// Puerto común de integración: cada plataforma (Teams/Meet/Zoom) implementa esta

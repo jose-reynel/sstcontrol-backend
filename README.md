@@ -116,31 +116,77 @@ Pendiente conocido, no implementado todavía: **versionado de rutas de API**
 
 
 ## Alcance de este scaffold
-Se implementaron completos como ejemplo: **Auth, Documentos, Empresas/Sedes, Actas**.
+Se implementaron completos: **Auth (con refresh tokens), Documentos (con OCR),
+Empresas/Sedes, Actas (con bot de minutas y compromisos), Control de acceso RBAC**.
 El resto de entidades del MER (Cursos, Progreso, Gamificación, Checklist, Bitácora)
-ya están modeladas en `SstControlDbContext` y siguen exactamente el mismo patrón
+ya están modeladas en `ContextoBaseDatos` y siguen exactamente el mismo patrón
 (Repositorio → Servicio → Controlador) — solo falta repetir la receta.
 
-## 6. Capa de integraciones: Teams, Google Meet y Zoom
+## 6. Bot de minutas: seguimiento de actas y su vínculo con Documentos
 
-Nuevo proyecto **`SstControl.Integrations`**, con un conector developer-level por
-plataforma que implementa la interfaz común `IMeetingConnector` (Application):
+Da seguimiento real a una Acta más allá del registro de la reunión: extrae
+**compromisos** (acuerdo, responsable, fecha límite) del contenido ya
+sincronizado, y permite vincular cada uno al **Documento** cuyo cambio lo cierra
+— la pieza que conecta "qué se acordó en la reunión" con "qué cambió en el
+sistema documental".
+
+- `IServicioResumenReunion` (puerto de extracción) → `ServicioResumenReunionHeuristico`,
+  la implementación por defecto: reglas de texto (palabras clave como
+  "acción:", "compromiso:", "responsable:", casillas `- [ ]`), **no** un modelo
+  de lenguaje — es intencionalmente simple y gratuita, pensada como un primer
+  barrido para revisar y corregir a mano. Conectar un proveedor de IA real (ej.
+  la API de Anthropic) más adelante es escribir otra implementación de esta
+  misma interfaz y cambiar un registro en `Program.cs`, sin tocar nada más.
+- `POST /api/actas/{id}/generar-minuta` — corre el bot sobre `ContenidoReunion.Resumen`
+  (transcripción o resumen que el conector de Teams/Meet/Zoom/Webex ya dejó
+  guardado) y registra los compromisos nuevos. Idempotente: no duplica
+  compromisos que el bot ya había generado sobre el mismo texto.
+- `GET /api/actas/{id}/compromisos`, `POST /api/actas/{id}/compromisos` (agregar a mano).
+- `POST /api/compromisos/{id}/cumplir`, `POST /api/compromisos/{id}/vincular-documento`.
+
+## 7. Digitalización (OCR) de documentos físicos
+
+`POST /api/documentos/{id}/escaneo` (multipart/form-data, campo `archivo`) sube
+una foto o imagen escaneada de un documento físico y ejecuta OCR **local** con
+[Tesseract](https://github.com/tesseract-ocr/tesseract) — sin depender de una
+API de nube ni de credenciales externas. Solo el texto reconocido y su
+confianza se guardan (`DigitalizacionDocumento`); la imagen en sí se procesa en
+memoria y se descarta.
+
+- Formatos soportados: JPEG, PNG, BMP, TIFF — máximo 15 MB. Un PDF debe
+  convertirse a imagen antes de subirlo (fuera de alcance a propósito, para no
+  sumar una dependencia de conversión como Ghostscript).
+- Requiere el permiso `documentos.escanear` (RBAC) — como cualquier permiso
+  nuevo, hace falta sembrarlo en la tabla `Permiso` y asignarlo a los roles
+  correspondientes; no hay un seeder automático todavía (ver limitación
+  conocida más abajo).
+- El binario nativo y los datos de idioma español ya vienen instalados en la
+  imagen Docker (`SstControl.Api/Dockerfile`). Para correr fuera de Docker,
+  instala `tesseract-ocr` + el paquete de idioma español de tu SO y ajusta
+  `Ocr:RutaDatosEntrenamiento` en `appsettings.json`.
+- `GET /api/documentos/{id}/escaneo` — consulta la digitalización ya hecha (o `null`).
+
+## 8. Capa de integraciones: Teams, Google Meet, Zoom y Webex
+
+Proyecto **`SstControl.Integrations`**, con un conector developer-level por
+plataforma que implementa la interfaz común `IConectorReunion` (Application):
 
 ```
 SstControl.Integrations/
- ├── Auth/ClientCredentialsTokenProvider.cs   → OAuth2 client-credentials (Teams, Zoom)
+ ├── Auth/ProveedorTokenClientCredentials.cs  → OAuth2 client-credentials (Teams, Zoom)
  └── Connectors/
       ├── ConectorTeams.cs         → Microsoft Graph (Azure AD app, permisos Application)
       ├── ConectorZoom.cs          → Zoom Server-to-Server OAuth
       ├── ConectorGoogleMeet.cs    → Google Meet REST API (cuenta de servicio, JWT RS256)
-      └── MeetingConnectorFactory.cs
+      ├── ConectorWebex.cs         → Cisco Webex (Service App, refresh token de larga duración)
+      └── FabricaConectoresReunion.cs
 ```
 
-`MeetingSyncService` (Infrastructure) orquesta: llama al conector → trae reunión +
-asistentes + contenido (grabación/resumen si existe) → persiste como `Minute` +
-`MeetingAttendee` (uno por asistente, con hora de entrada/salida) + `MeetingContent`
-en PostgreSQL, y deja registro en `AuditLog`. Es idempotente: si la reunión ya se
-había sincronizado, actualiza en vez de duplicar.
+`ServicioSincronizacionReuniones` (Infrastructure) orquesta: llama al conector →
+trae reunión + asistentes + contenido (transcripción/grabación si existe) →
+persiste como `Acta` + `AsistenteReunion` (uno por asistente, con hora de
+entrada/salida) + `ContenidoReunion` en PostgreSQL. Ese `ContenidoReunion` es
+justo el insumo que después consume el bot de minutas (sección 6).
 
 ### Qué debes crear en cada plataforma (nivel developer)
 
@@ -150,14 +196,15 @@ había sincronizado, actualiza en vez de duplicar.
 3. En "API permissions" agrega permisos de tipo **Application** (no delegados):
    `OnlineMeetings.Read.All`, `OnlineMeetingArtifact.Read.All` → pide **consentimiento
    de administrador** (botón "Grant admin consent").
-4. Copia `TenantId`, `ClientId`, `ClientSecret` a `appsettings.json` → `Integrations:Teams`.
+4. Copia `TenantId`, `ClientId`, `ClientSecret` y el `UPN`/id del organizador a
+   `appsettings.json` → `Integraciones:Teams`.
 
 **Zoom (Server-to-Server OAuth)**
 1. [marketplace.zoom.us](https://marketplace.zoom.us) → Develop → Build App → **Server-to-Server OAuth**.
 2. Scopes: `meeting:read:admin`, `report:read:admin` (y `recording:read:admin` si quieres grabaciones).
-3. Copia `Account ID`, `Client ID`, `Client Secret` a `Integrations:Zoom`.
+3. Copia `Account ID`, `Client ID`, `Client Secret` a `Integraciones:Zoom`.
 4. Para el webhook: en la misma app, sección "Event Subscriptions", registra
-   `https://tu-api.com/api/webhooks/zoom` y copia el **Secret Token** a `Integrations:Zoom:WebhookSecretToken`.
+   `https://tu-api.com/api/webhooks/zoom` y copia el **Secret Token** a `Integraciones:Zoom:TokenSecretoWebhook`.
 
 **Google Meet (Google Meet REST API)**
 1. [console.cloud.google.com](https://console.cloud.google.com) → crea proyecto → habilita **"Google Meet API"**.
@@ -166,28 +213,47 @@ había sincronizado, actualiza en vez de duplicar.
    del dominio) → Seguridad → Controles de API → Delegación en todo el dominio → autoriza
    el `client_id` de la cuenta de servicio con el scope
    `https://www.googleapis.com/auth/meetings.space.readonly`.
-4. Copia `client_email` y `private_key` del JSON a `Integrations:GoogleMeet`.
+4. Copia `client_email` y `private_key` del JSON a `Integraciones:GoogleMeet`.
+
+**Cisco Webex (Service App)**
+1. [developer.webex.com](https://developer.webex.com) → My Webex Apps → **Create a Service App**.
+2. Scopes: `meeting:schedules_read`, `meeting:participants_read`,
+   `meeting:recordings_read`, `meeting:transcripts_read`.
+3. Un administrador de tu organización Webex debe **activar** la Service App
+   (no queda funcional solo con crearla).
+4. Webex entrega `client_id`/`client_secret` + un **refresh_token** de larga
+   duración — cópialos a `Integraciones:Webex`.
+5. Para el webhook: `POST /v1/webhooks` en la API de Webex, con
+   `targetUrl = https://tu-api.com/api/webhooks/webex`, `resource = meetings`,
+   `event = ended`, y un `secret` propio — copia ese mismo secret a
+   `Integraciones:Webex:TokenSecretoWebhook`. A diferencia de Zoom/Teams, Webex
+   no exige un reto de validación al registrar el webhook; en cambio, **cada
+   evento llega firmado** con HMAC-SHA1 en el header `X-Spark-Signature`, y el
+   endpoint sí valida esa firma (comparación en tiempo constante) antes de
+   procesar cualquier evento — a diferencia de los otros tres webhooks, que
+   por ahora solo resuelven el reto de registro.
 
 ### Endpoints expuestos por la API
 
 ```
-POST /api/meetingsync/teams        { externalMeetingId, companyId, siteId, type }
-POST /api/meetingsync/zoom         { externalMeetingId, companyId, siteId, type }
-POST /api/meetingsync/googlemeet   { externalMeetingId, companyId, siteId, type }
-POST /api/webhooks/teams           ← registrar en Graph change notifications
-POST /api/webhooks/zoom            ← registrar en Zoom Event Subscriptions
-POST /api/webhooks/google-meet     ← receptor si usas Pub/Sub push a HTTP
+POST /api/sincronizacion-reuniones/{proveedor}   { idReunionExterna, idEmpresa, idSede, tipo }
+                                                  proveedor: teams | googlemeet | zoom | webex
+POST /api/webhooks/teams        ← registrar en Graph change notifications
+POST /api/webhooks/zoom         ← registrar en Zoom Event Subscriptions
+POST /api/webhooks/google-meet  ← receptor si usas Pub/Sub push a HTTP
+POST /api/webhooks/webex        ← registrar vía POST /v1/webhooks de Webex (firma validada)
 ```
 
-Los tres endpoints de sincronización requieren rol `admin` (mismo JWT del resto de la API).
+La sincronización manual requiere el permiso `reuniones.sincronizar`; los
+cuatro webhooks son anónimos por diseño (los llama la plataforma externa, no
+un usuario autenticado de SstControl) — Zoom/Webex validan la petición por su
+cuenta (reto de registro o firma); Teams/Google Meet todavía no.
 
 ### Limitación honesta
-Los webhooks de Teams y Zoom quedan con el **punto de entrada y la validación de registro
-ya resueltos** (Zoom "url_validation", Graph "validationToken"), pero el procesamiento del
-evento real (`meeting.ended`, notificación de Graph) queda marcado con `TODO` — mapear
-automáticamente una reunión externa a una `Company`/`Site` del sistema requiere una
-convención propia tuya (ej. código de sede en el título de la reunión, o una tabla de
-configuración `sede ↔ id de sala/organizador`), que no puedo inventar por ti sin conocer
-cómo organizas tus reuniones reales. La sincronización manual (`POST /api/meetingsync/...`)
-sí queda 100% funcional.
-
+En los cuatro webhooks, el procesamiento del evento real de "reunión terminada"
+queda marcado con `TODO`: mapear automáticamente una reunión externa a una
+`Empresa`/`Sede` del sistema requiere una convención propia tuya (ej. un código
+de sede en el título de la reunión, o una tabla `sede ↔ id de sala/organizador`)
+que no puedo inventar sin conocer cómo organizas tus reuniones reales. La
+sincronización manual (`POST /api/sincronizacion-reuniones/{proveedor}`) sí
+queda 100% funcional mientras tanto.

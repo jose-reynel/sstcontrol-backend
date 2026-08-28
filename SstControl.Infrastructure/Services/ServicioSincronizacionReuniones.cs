@@ -100,6 +100,7 @@ public class ServicioSincronizacionReuniones : IServicioSincronizacionReuniones
         ProveedorReunion.Teams => OrigenReunion.Teams,
         ProveedorReunion.GoogleMeet => OrigenReunion.GoogleMeet,
         ProveedorReunion.Zoom => OrigenReunion.Zoom,
+        ProveedorReunion.Webex => OrigenReunion.Webex,
         _ => OrigenReunion.Manual,
     };
 }

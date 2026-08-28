@@ -32,11 +32,13 @@ public class ContextoBaseDatos : DbContext
     // ---- Gestión documental ----
     public DbSet<TipoDocumento> TiposDocumento => Set<TipoDocumento>();
     public DbSet<Documento> Documentos => Set<Documento>();
+    public DbSet<DigitalizacionDocumento> DigitalizacionesDocumento => Set<DigitalizacionDocumento>();
 
     // ---- Actas y reuniones ----
     public DbSet<Acta> Actas => Set<Acta>();
     public DbSet<AsistenteReunion> AsistentesReunion => Set<AsistenteReunion>();
     public DbSet<ContenidoReunion> ContenidosReunion => Set<ContenidoReunion>();
+    public DbSet<CompromisoActa> CompromisosActa => Set<CompromisoActa>();
 
     // ---- Capacitación y gamificación ----
     public DbSet<Curso> Cursos => Set<Curso>();
@@ -144,6 +146,13 @@ public class ContextoBaseDatos : DbContext
             .HasOne(d => d.UsuarioAprueba).WithMany(u => u.DocumentosAprobados)
             .HasForeignKey(d => d.IdUsuarioAprueba).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
         modelo.Entity<Documento>().Property(d => d.Estado).HasConversion<string>().HasMaxLength(20);
+
+        // DOCUMENTO (1) --- (1) DIGITALIZACION_DOCUMENTO [opcional] — insumo OCR de un
+        // documento físico escaneado; nulo si el documento nació digital.
+        modelo.Entity<DigitalizacionDocumento>().HasKey(d => d.IdDocumento);
+        modelo.Entity<DigitalizacionDocumento>()
+            .HasOne(d => d.Documento).WithOne(doc => doc.Digitalizacion)
+            .HasForeignKey<DigitalizacionDocumento>(d => d.IdDocumento).OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigurarActasYReuniones(ModelBuilder modelo)
@@ -171,6 +180,19 @@ public class ContextoBaseDatos : DbContext
         modelo.Entity<ContenidoReunion>()
             .HasOne(c => c.Acta).WithOne(a => a.Contenido)
             .HasForeignKey<ContenidoReunion>(c => c.IdActa).OnDelete(DeleteBehavior.Cascade);
+
+        // ACTA (1) --- (N) COMPROMISO_ACTA
+        modelo.Entity<CompromisoActa>()
+            .HasOne(c => c.Acta).WithMany(a => a.Compromisos)
+            .HasForeignKey(c => c.IdActa).OnDelete(DeleteBehavior.Cascade);
+        modelo.Entity<CompromisoActa>().Property(c => c.Estado).HasConversion<string>().HasMaxLength(20);
+        modelo.Entity<CompromisoActa>().Property(c => c.Origen).HasConversion<string>().HasMaxLength(20);
+        // DOCUMENTO (1) --- (N) COMPROMISO_ACTA [relacionado, opcional] — el cambio
+        // documental que cierra el compromiso; Restrict evita borrar un documento
+        // que todavía tiene compromisos de actas apuntándole.
+        modelo.Entity<CompromisoActa>()
+            .HasOne(c => c.DocumentoRelacionado).WithMany(d => d.CompromisosRelacionados)
+            .HasForeignKey(c => c.IdDocumentoRelacionado).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
     }
 
     private static void ConfigurarCapacitacionYGamificacion(ModelBuilder modelo)

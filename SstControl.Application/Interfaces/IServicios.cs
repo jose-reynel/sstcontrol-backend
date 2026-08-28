@@ -43,6 +43,49 @@ public interface IServicioActa
     Task<ActaDto> CrearAsync(CrearActaDto datos, int idUsuarioCreador);
 }
 
+/// <summary>
+/// El "bot de minutas": da seguimiento a una Acta más allá del registro de la
+/// reunión en sí — genera compromisos a partir del contenido ya sincronizado (ver
+/// SstControl.Aplicacion.Integraciones.IServicioResumenReunion) y permite
+/// vincularlos al cambio documental que efectivamente los cierra.
+/// </summary>
+public interface IServicioBotActas
+{
+    /// <summary>Analiza el contenido ya sincronizado del acta (ContenidoReunion) y
+    /// registra los compromisos nuevos que detecte, con Origen = Bot. Es seguro
+    /// llamarlo varias veces sobre el mismo texto: no duplica lo ya generado antes.
+    /// Si el acta no tiene contenido textual (ej. solo hay un enlace de grabación,
+    /// sin transcripción), devuelve los compromisos existentes sin generar nada nuevo
+    /// — este bot no transcribe audio, solo interpreta texto ya disponible.</summary>
+    Task<MinutaGeneradaDto> GenerarMinutaAsync(int idActa);
+
+    Task<IReadOnlyList<CompromisoActaDto>> ObtenerCompromisosAsync(int idActa);
+
+    /// <summary>Agrega un compromiso a mano (el bot genera los suyos automáticamente vía GenerarMinutaAsync).</summary>
+    Task<CompromisoActaDto> AgregarCompromisoAsync(int idActa, CrearCompromisoDto datos);
+
+    Task<CompromisoActaDto> MarcarCumplidoAsync(int idCompromiso);
+
+    /// <summary>Vincula un compromiso a un Documento ya existente — el cambio
+    /// documental (ej. "renovar el procedimiento X") que lo cierra.</summary>
+    Task<CompromisoActaDto> VincularDocumentoAsync(int idCompromiso, int idDocumento);
+}
+
+/// <summary>
+/// Digitalización (escaneo + OCR) de documentos físicos de SST — el insumo digital
+/// de un papel. Ver SstControl.Infraestructura.Servicios.ServicioOcrTesseract para
+/// la implementación concreta.
+/// </summary>
+public interface IServicioOcr
+{
+    /// <summary>Ejecuta OCR sobre el contenido escaneado y lo guarda asociado al
+    /// Documento indicado (debe existir de antemano — el flujo esperado es: crear el
+    /// Documento con sus datos estructurados, luego adjuntar el escaneo como evidencia).</summary>
+    Task<DigitalizacionDocumentoDto> DigitalizarAsync(int idDocumento, Stream contenidoArchivo, string nombreArchivo, string tipoContenido);
+
+    Task<DigitalizacionDocumentoDto?> ObtenerDigitalizacionAsync(int idDocumento);
+}
+
 /// <summary>Autenticación de usuarios y emisión de tokens JWT.</summary>
 public interface IServicioAutenticacion
 {

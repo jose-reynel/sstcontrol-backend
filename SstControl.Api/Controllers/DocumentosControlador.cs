@@ -5,14 +5,17 @@ using SstControl.Aplicacion.Interfaces;
 
 namespace SstControl.Api.Controladores;
 
-/// <summary>Endpoints del ciclo documental: captura, firma de aprobación y renovación.</summary>
+/// <summary>Endpoints del ciclo documental: captura, firma de aprobación, renovación
+/// y digitalización (OCR) de documentos físicos escaneados.</summary>
 [ApiController]
 [Authorize]
 [Route("api/documentos")]
 public class DocumentosControlador : ControllerBase
 {
     private readonly IServicioDocumento _servicioDocumento;
-    public DocumentosControlador(IServicioDocumento servicioDocumento) => _servicioDocumento = servicioDocumento;
+    private readonly IServicioOcr _servicioOcr;
+    public DocumentosControlador(IServicioDocumento servicioDocumento, IServicioOcr servicioOcr)
+    { _servicioDocumento = servicioDocumento; _servicioOcr = servicioOcr; }
 
     /// <summary>GET /api/documentos?pagina=1&amp;tamanioPagina=20 — lista documentos
     /// paginados, del más reciente al más antiguo. El tamaño de página se limita
@@ -50,4 +53,29 @@ public class DocumentosControlador : ControllerBase
     [HttpDelete("{id:int}")]
     [Authorize(Policy = "documentos.eliminar")]
     public async Task<IActionResult> Eliminar(int id) { await _servicioDocumento.EliminarAsync(id); return NoContent(); }
+
+    /// <summary>POST /api/documentos/{id}/escaneo — sube una foto o imagen escaneada
+    /// de un documento físico y ejecuta OCR sobre ella (JPEG, PNG, BMP o TIFF; máx.
+    /// 15 MB — un PDF debe convertirse a imagen antes de subirlo). El documento debe
+    /// existir de antemano: primero se registra con sus datos estructurados
+    /// (POST /api/documentos), luego se adjunta el escaneo como evidencia digital.
+    /// Requiere el permiso "documentos.escanear" (RBAC).</summary>
+    [HttpPost("{id:int}/escaneo")]
+    [Authorize(Policy = "documentos.escanear")]
+    [RequestSizeLimit(15 * 1024 * 1024)]
+    public async Task<ActionResult<DigitalizacionDocumentoDto>> Escanear(int id, IFormFile archivo)
+    {
+        if (archivo is null || archivo.Length == 0)
+            return BadRequest(new { mensaje = "Debes adjuntar un archivo." });
+
+        await using var flujo = archivo.OpenReadStream();
+        var resultado = await _servicioOcr.DigitalizarAsync(id, flujo, archivo.FileName, archivo.ContentType);
+        return Ok(resultado);
+    }
+
+    /// <summary>GET /api/documentos/{id}/escaneo — consulta la digitalización ya
+    /// hecha de un documento (null si nunca se escaneó ninguna evidencia física).</summary>
+    [HttpGet("{id:int}/escaneo")]
+    public async Task<ActionResult<DigitalizacionDocumentoDto?>> ObtenerEscaneo(int id) =>
+        Ok(await _servicioOcr.ObtenerDigitalizacionAsync(id));
 }

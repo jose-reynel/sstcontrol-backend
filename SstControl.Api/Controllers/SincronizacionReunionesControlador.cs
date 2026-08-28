@@ -24,7 +24,7 @@ public class SincronizacionReunionesControlador : ControllerBase
     public async Task<IActionResult> Sincronizar(string proveedor, PeticionSincronizarReunion peticion)
     {
         if (!Enum.TryParse<ProveedorReunion>(proveedor, ignoreCase: true, out var proveedorResuelto))
-            return BadRequest(new { mensaje = "Proveedor no soportado. Usa teams, googlemeet o zoom." });
+            return BadRequest(new { mensaje = "Proveedor no soportado. Usa teams, googlemeet, zoom o webex." });
 
         var idUsuario = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         var tipo = Enum.Parse<TipoActa>(peticion.Tipo, ignoreCase: true);
@@ -89,4 +89,47 @@ public class WebhooksReunionesControlador : ControllerBase
     /// Meet — este endpoint queda como receptor si se configura un push subscription a HTTP.</summary>
     [HttpPost("google-meet")]
     public IActionResult WebhookGoogleMeet() => Ok();
+
+    /// <summary>Webex firma cada evento con HMAC-SHA1 en el header "X-Spark-Signature"
+    /// (sobre el cuerpo crudo de la petición) — a diferencia de Zoom/Teams, no exige un
+    /// reto de validación al registrar el webhook: eso se resuelve al crearlo vía
+    /// POST /v1/webhooks en la API de Webex, pasando este mismo targetUrl y secret.
+    /// Valida la firma con comparación en tiempo constante antes de confiar en el
+    /// evento — sin esto, cualquiera que descubra esta URL podría inventar eventos
+    /// falsos de "reunión terminada".</summary>
+    [HttpPost("webex")]
+    public async Task<IActionResult> WebhookWebex()
+    {
+        Request.EnableBuffering();
+        string cuerpoCrudo;
+        using (var lector = new StreamReader(Request.Body, System.Text.Encoding.UTF8, leaveOpen: true))
+            cuerpoCrudo = await lector.ReadToEndAsync();
+        Request.Body.Position = 0;
+
+        var secreto = _configuracion["Integraciones:Webex:TokenSecretoWebhook"];
+        var firmaRecibida = Request.Headers["X-Spark-Signature"].FirstOrDefault();
+        if (string.IsNullOrEmpty(secreto) || string.IsNullOrEmpty(firmaRecibida))
+            return Unauthorized();
+
+        var firmaCalculada = Convert.ToHexString(
+            new System.Security.Cryptography.HMACSHA1(System.Text.Encoding.UTF8.GetBytes(secreto))
+                .ComputeHash(System.Text.Encoding.UTF8.GetBytes(cuerpoCrudo))).ToLowerInvariant();
+
+        var coinciden = System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+            System.Text.Encoding.UTF8.GetBytes(firmaCalculada),
+            System.Text.Encoding.UTF8.GetBytes(firmaRecibida.ToLowerInvariant()));
+        if (!coinciden) return Unauthorized();
+
+        var carga = System.Text.Json.JsonDocument.Parse(cuerpoCrudo).RootElement;
+        var esReunionTerminada = carga.TryGetProperty("resource", out var recurso) && recurso.GetString() == "meetings"
+            && carga.TryGetProperty("event", out var evento) && evento.GetString() == "ended";
+
+        if (esReunionTerminada)
+        {
+            // TODO producción: resolver la empresa/sede según la convención definida
+            // (ver Manual de Parametrización) y disparar
+            // _servicioSincronizacion.SincronizarReunionAsync(ProveedorReunion.Webex, ...).
+        }
+        return Ok();
+    }
 }

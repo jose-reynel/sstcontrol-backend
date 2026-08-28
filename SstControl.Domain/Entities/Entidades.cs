@@ -243,6 +243,43 @@ public class Documento
     public int? IdUsuarioAprueba { get; set; }
     public Usuario? UsuarioAprueba { get; set; }
     public DateTimeOffset? FechaFirma { get; set; }
+
+    /// <summary>Insumo digital (OCR) si este documento se originó escaneando un papel
+    /// físico — nulo si el documento nació digital.</summary>
+    public DigitalizacionDocumento? Digitalizacion { get; set; }
+
+    /// <summary>Compromisos de actas que apuntan a este documento como el cambio
+    /// documental que los cierra (ver CompromisoActa.DocumentoRelacionado).</summary>
+    public ICollection<CompromisoActa> CompromisosRelacionados { get; set; } = new List<CompromisoActa>();
+}
+
+/// <summary>
+/// Resultado de digitalizar (escanear + reconocimiento óptico de caracteres) un
+/// documento físico de SST — el insumo digital y buscable de un papel. Relación
+/// 1 a 1 con Documento, igual que ContenidoReunion lo es con Acta: el Documento
+/// en sí sigue siendo el registro de negocio (colaborador, actividad, vigencia);
+/// esto guarda la evidencia del escaneo.
+/// </summary>
+public class DigitalizacionDocumento
+{
+    public int IdDocumento { get; set; } // clave primaria y foránea a la vez
+    public Documento Documento { get; set; } = default!;
+
+    public string NombreArchivoOriginal { get; set; } = default!;
+
+    /// <summary>Tipo MIME del archivo escaneado (image/jpeg, image/png, application/pdf...).</summary>
+    public string TipoContenido { get; set; } = default!;
+    public long TamanioBytes { get; set; }
+
+    /// <summary>Texto reconocido por OCR — lo que hace buscable un papel que antes
+    /// solo existía como una foto o un PDF escaneado.</summary>
+    public string? TextoExtraido { get; set; }
+
+    /// <summary>Confianza promedio reportada por el motor OCR (0-100), si el motor
+    /// la expone — sirve para marcar digitalizaciones que conviene revisar a mano.</summary>
+    public double? Confianza { get; set; }
+
+    public DateTimeOffset FechaEscaneo { get; set; } = DateTimeOffset.UtcNow;
 }
 
 // =========================================================================
@@ -253,7 +290,7 @@ public class Documento
 public enum TipoActa { Reunion, Capacitacion }
 
 /// <summary>Plataforma de origen de una reunión sincronizada, o registro manual.</summary>
-public enum OrigenReunion { Manual, Teams, GoogleMeet, Zoom }
+public enum OrigenReunion { Manual, Teams, GoogleMeet, Zoom, Webex }
 
 /// <summary>
 /// Acta de una reunión o capacitación realizada en una sede de una empresa cliente.
@@ -289,6 +326,10 @@ public class Acta
 
     public ICollection<AsistenteReunion> AsistentesReunion { get; set; } = new List<AsistenteReunion>();
     public ContenidoReunion? Contenido { get; set; }
+
+    /// <summary>Acuerdos/tareas de seguimiento de esta acta — a mano o generados por
+    /// el bot de minutas (ver IServicioBotActas). El "para qué" de dar seguimiento.</summary>
+    public ICollection<CompromisoActa> Compromisos { get; set; } = new List<CompromisoActa>();
 }
 
 /// <summary>
@@ -322,6 +363,37 @@ public class ContenidoReunion
     /// <summary>"transcript" | "recording" | "summary".</summary>
     public string TipoContenido { get; set; } = "summary";
     public DateTimeOffset FechaObtencion { get; set; } = DateTimeOffset.UtcNow;
+}
+
+/// <summary>Estado de un compromiso/acuerdo de seguimiento de una Acta.</summary>
+public enum EstadoCompromiso { Pendiente, Cumplido }
+
+/// <summary>Cómo se originó el compromiso: extraído automáticamente por el bot de
+/// minutas a partir del contenido de la reunión, o agregado a mano.</summary>
+public enum OrigenCompromiso { Bot, Manual }
+
+/// <summary>
+/// Acuerdo o tarea de seguimiento surgida de una Acta — el "para qué" real de dar
+/// seguimiento a una reunión. Puede vincularse a un Documento existente (ej. "hay
+/// que renovar el procedimiento X") para que el compromiso quede trazado hasta el
+/// cambio documental que efectivamente lo cierra — ver IServicioBotActas.
+/// </summary>
+public class CompromisoActa
+{
+    public int IdCompromiso { get; set; }
+    public int IdActa { get; set; }
+    public Acta Acta { get; set; } = default!;
+
+    public string Descripcion { get; set; } = default!;
+    public string? Responsable { get; set; }
+    public DateOnly? FechaLimite { get; set; }
+    public EstadoCompromiso Estado { get; set; } = EstadoCompromiso.Pendiente;
+    public OrigenCompromiso Origen { get; set; } = OrigenCompromiso.Manual;
+    public DateTimeOffset FechaCreacion { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>Documento cuyo cambio (o cuya creación) cierra este compromiso — opcional.</summary>
+    public int? IdDocumentoRelacionado { get; set; }
+    public Documento? DocumentoRelacionado { get; set; }
 }
 
 // =========================================================================

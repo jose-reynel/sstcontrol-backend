@@ -42,10 +42,20 @@ constructor.Services.AddScoped<IServicioActa, ServicioActa>();
 constructor.Services.AddScoped<IServicioAutenticacion, ServicioAutenticacion>();
 constructor.Services.AddScoped<IServicioControlAcceso, ServicioControlAcceso>();
 
-// ---- Capa de integraciones: conectores developer-level a Teams / Google Meet / Zoom ----
+// ---- Bot de minutas: seguimiento de compromisos de una Acta ----
+// La implementación heurística no requiere configuración; si más adelante se
+// conecta un proveedor de IA real, basta con registrar otra IServicioResumenReunion aquí.
+constructor.Services.AddScoped<IServicioResumenReunion, ServicioResumenReunionHeuristico>();
+constructor.Services.AddScoped<IServicioBotActas, ServicioBotActas>();
+
+// ---- Digitalización (OCR) de documentos físicos escaneados ----
+constructor.Services.AddScoped<IServicioOcr, ServicioOcrTesseract>();
+
+// ---- Capa de integraciones: conectores developer-level a Teams / Google Meet / Zoom / Webex ----
 constructor.Services.AddHttpClient<IConectorReunion, ConectorTeams>();
 constructor.Services.AddHttpClient<IConectorReunion, ConectorZoom>();
 constructor.Services.AddHttpClient<IConectorReunion, ConectorGoogleMeet>();
+constructor.Services.AddHttpClient<IConectorReunion, ConectorWebex>();
 constructor.Services.AddScoped<IFabricaConectoresReunion, FabricaConectoresReunion>();
 constructor.Services.AddScoped<IServicioSincronizacionReuniones, ServicioSincronizacionReuniones>();
 

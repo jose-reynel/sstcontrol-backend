@@ -41,6 +41,34 @@ public record CrearActaDto(
     [property: MaxLength(2000)] string? Asistentes,
     [property: MaxLength(4000)] string? Notas);
 
+// ---- Bot de minutas: seguimiento de compromisos surgidos de una Acta ----
+
+/// <summary>Un compromiso/acuerdo de seguimiento de una Acta, ya sea extraído por el
+/// bot de minutas o agregado a mano.</summary>
+public record CompromisoActaDto(int IdCompromiso, int IdActa, string Descripcion, string? Responsable,
+    DateOnly? FechaLimite, string Estado, string Origen, int? IdDocumentoRelacionado, string? NombreDocumentoRelacionado);
+
+/// <summary>Datos para agregar un compromiso a mano (el bot usa su propio flujo interno).</summary>
+public record CrearCompromisoDto(
+    [property: Required(AllowEmptyStrings = false), MaxLength(500)] string Descripcion,
+    [property: MaxLength(150)] string? Responsable,
+    DateOnly? FechaLimite,
+    [property: Range(1, int.MaxValue)] int? IdDocumentoRelacionado);
+
+/// <summary>Vincula un compromiso ya existente al documento cuyo cambio lo cierra.</summary>
+public record VincularDocumentoDto([property: Range(1, int.MaxValue)] int IdDocumento);
+
+/// <summary>Resultado de una pasada del bot de minutas sobre el contenido de una
+/// reunión: el resumen que usó como fuente y los compromisos que extrajo.</summary>
+public record MinutaGeneradaDto(string? TextoFuente, List<CompromisoActaDto> Compromisos);
+
+// ---- Digitalización de documentos físicos (OCR) ----
+
+/// <summary>Resultado de escanear un documento físico — el insumo digital y
+/// buscable que queda asociado al Documento.</summary>
+public record DigitalizacionDocumentoDto(int IdDocumento, string NombreArchivoOriginal, string TipoContenido,
+    long TamanioBytes, string? TextoExtraido, double? Confianza, DateTimeOffset FechaEscaneo);
+
 /// <summary>Resultado de un inicio de sesión (o renovación) exitoso: el JWT de
 /// corta duración para llamar a la API, el token de renovación de larga duración
 /// (opaco, no es un JWT) para obtener un JWT nuevo sin pedir la contraseña de
