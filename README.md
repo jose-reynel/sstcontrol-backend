@@ -107,9 +107,11 @@ Además del CRUD funcional, la API incluye:
   /api/autenticacion/cerrar-sesion` revoca el token del lado del servidor —
   antes "cerrar sesión" solo borraba el token en el cliente.
 - **Tests automatizados** (`SstControl.Tests`, xUnit + EF Core InMemory):
-  cubren la paginación y el resumen agregado de Documentos, y el flujo completo
+  cubren la paginación y el resumen agregado de Documentos, el flujo completo
   de refresh tokens (emisión, rotación, y la revocación en cadena ante reuso de
-  un token ya rotado). Corre `dotnet test` desde la raíz del repo.
+  un token ya rotado), y las validaciones de digitalización OCR que no
+  requieren el binario nativo de Tesseract instalado. Corre `dotnet test`
+  desde la raíz del repo.
 
 Pendiente conocido, no implementado todavía: **versionado de rutas de API**
 (`/api/v2/...` cuando haya un cambio incompatible).
