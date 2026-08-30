@@ -72,6 +72,17 @@ public class ContextoBaseDatos : DbContext
     /// </summary>
     private static void ConfigurarControlDeAcceso(ModelBuilder modelo)
     {
+        // Las claves primarias de una sola columna usan el prefijo "Id" + nombre
+        // (ej. "IdPermiso") en vez del sufijo que reconoce la convención por
+        // defecto de EF Core ("Id" o "<Entidad>Id") — sin esto, EF Core no
+        // identificaría la clave primaria y el modelo no llegaría a construirse.
+        modelo.Entity<Permiso>().HasKey(p => p.IdPermiso);
+        modelo.Entity<Perfil>().HasKey(p => p.IdPerfil);
+        modelo.Entity<Rol>().HasKey(r => r.IdRol);
+        modelo.Entity<Grupo>().HasKey(g => g.IdGrupo);
+        modelo.Entity<Usuario>().HasKey(u => u.IdUsuario);
+        modelo.Entity<TokenRenovacion>().HasKey(t => t.IdTokenRenovacion);
+
         modelo.Entity<Permiso>().HasIndex(p => p.Codigo).IsUnique();
         modelo.Entity<Perfil>().HasIndex(p => p.Nombre).IsUnique();
         modelo.Entity<Rol>().HasIndex(r => r.Nombre).IsUnique();
@@ -129,6 +140,9 @@ public class ContextoBaseDatos : DbContext
 
     private static void ConfigurarOrganizacionCliente(ModelBuilder modelo)
     {
+        modelo.Entity<Empresa>().HasKey(e => e.IdEmpresa);
+        modelo.Entity<Sede>().HasKey(s => s.IdSede);
+
         // EMPRESA (1) --- (N) SEDE
         modelo.Entity<Sede>()
             .HasOne(s => s.Empresa).WithMany(e => e.Sedes)
@@ -137,6 +151,9 @@ public class ContextoBaseDatos : DbContext
 
     private static void ConfigurarGestionDocumental(ModelBuilder modelo)
     {
+        modelo.Entity<TipoDocumento>().HasKey(t => t.IdTipoDocumento);
+        modelo.Entity<Documento>().HasKey(d => d.IdDocumento);
+
         // TIPO_DOCUMENTO (1) --- (N) DOCUMENTO
         modelo.Entity<Documento>()
             .HasOne(d => d.TipoDocumento).WithMany(t => t.Documentos)
@@ -157,6 +174,10 @@ public class ContextoBaseDatos : DbContext
 
     private static void ConfigurarActasYReuniones(ModelBuilder modelo)
     {
+        modelo.Entity<Acta>().HasKey(a => a.IdActa);
+        modelo.Entity<AsistenteReunion>().HasKey(a => a.IdAsistente);
+        modelo.Entity<CompromisoActa>().HasKey(c => c.IdCompromiso);
+
         // EMPRESA / SEDE (1) --- (N) ACTA
         modelo.Entity<Acta>()
             .HasOne(a => a.Empresa).WithMany(e => e.Actas)
@@ -197,6 +218,14 @@ public class ContextoBaseDatos : DbContext
 
     private static void ConfigurarCapacitacionYGamificacion(ModelBuilder modelo)
     {
+        modelo.Entity<Curso>().HasKey(c => c.IdCurso);
+        modelo.Entity<Leccion>().HasKey(l => l.IdLeccion);
+        modelo.Entity<PreguntaQuiz>().HasKey(p => p.IdPregunta);
+        modelo.Entity<OpcionQuiz>().HasKey(o => o.IdOpcion);
+        modelo.Entity<ProgresoCursoUsuario>().HasKey(p => p.IdProgreso);
+        modelo.Entity<SesionJuego>().HasKey(s => s.IdSesionJuego);
+        modelo.Entity<Insignia>().HasKey(i => i.IdInsignia);
+
         // CURSO (1) --- (N) LECCION
         modelo.Entity<Leccion>()
             .HasOne(l => l.Curso).WithMany(c => c.Lecciones)
@@ -237,6 +266,9 @@ public class ContextoBaseDatos : DbContext
 
     private static void ConfigurarCalidadYAuditoria(ModelBuilder modelo)
     {
+        modelo.Entity<ItemChecklist>().HasKey(i => i.IdItemChecklist);
+        modelo.Entity<RegistroAuditoria>().HasKey(r => r.IdRegistroAuditoria);
+
         // ITEM_CHECKLIST (1) --- (1) RESPUESTA_CHECKLIST
         modelo.Entity<RespuestaChecklist>().HasKey(r => r.IdItemChecklist);
         modelo.Entity<RespuestaChecklist>()

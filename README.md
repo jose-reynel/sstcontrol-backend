@@ -37,8 +37,40 @@ dotnet tool install --global dotnet-ef   # una sola vez
 dotnet ef migrations add InitialCreate --project ../SstControl.Infrastructure --startup-project .
 dotnet ef database update --project ../SstControl.Infrastructure --startup-project .
 ```
-Esto crea todas las tablas del MER (`mer-sst.mermaid`) en PostgreSQL respetando las
-cardinalidades configuradas en `SstControlDbContext.OnModelCreating`.
+Esto crea todas las tablas del modelo de datos (ver
+`docs/manuales-tecnicos/backend/01-arquitectura-y-modelo-de-datos.md` y su
+diagrama `mer-sst-actual.mermaid` — el `mer-sst.mermaid` de la raíz del repo
+quedó desactualizado, de un diseño anterior) respetando las cardinalidades
+configuradas en `ContextoBaseDatos.OnModelCreating`.
+
+### Datos semilla y datos de demostración
+
+```bash
+psql "$CONNECTION_STRING" -f docs/datos-semilla/01_catalogos_rbac.sql
+psql "$CONNECTION_STRING" -f docs/datos-semilla/02_empresas_y_sedes.sql
+psql "$CONNECTION_STRING" -f docs/datos-semilla/03_usuarios_y_asignacion_roles.sql
+psql "$CONNECTION_STRING" -f docs/datos-semilla/04_transacciones_simuladas.sql
+```
+
+Siembra, en orden:
+- **Parametrización** (01): 8 permisos, 3 perfiles, 3 roles (Administrador
+  SST, Asesor SST, Auditor SST), 5 tipos de documento. Idempotente — se
+  puede correr más de una vez sin duplicar filas.
+- **Cartera de clientes** (02): 5 empresas con 9 sedes en total.
+- **Usuarios** (03): 3 administradores + 10 asesores + 2 auditores, ya con
+  su rol asignado y agrupados por equipo/empresa. Idempotente. Contraseña
+  de práctica documentada en el script — cámbiala antes de cualquier uso
+  real.
+- **Transacciones de ejemplo** (04): 39 documentos con estados variados
+  (vigente/vencido/pendiente), 15 actas manuales y sincronizadas
+  (Teams/Zoom/Google Meet/Webex) con contenido real para el bot de minutas,
+  20 compromisos y 6 evidencias OCR ya digitalizadas — pensado para
+  correrse una sola vez.
+
+Ver `docs/datos-semilla/LEEME.md` para el detalle completo (orden de
+ejecución, prerrequisitos, qué es idempotente y qué no) y
+`docs/capacitacion/caso-de-estudio-end-to-end.md` para un recorrido guiado
+sobre estos mismos datos.
 
 ## 3. Configurar credenciales
 

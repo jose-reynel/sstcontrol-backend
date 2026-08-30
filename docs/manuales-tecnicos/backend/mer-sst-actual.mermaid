@@ -1,0 +1,164 @@
+erDiagram
+    %% Modelo entidad-relación real y vigente (módulos ya expuestos por la API).
+    %% Generado a partir de SstControl.Domain/Entities/Entidades.cs y
+    %% SstControl.Infrastructure/Persistence/ContextoBaseDatos.cs — no del
+    %% mer-sst.mermaid original (desactualizado, diseño anterior en inglés).
+
+    PERMISO ||--o{ PERFIL_PERMISO : "incluido en"
+    PERFIL ||--o{ PERFIL_PERMISO : "incluye"
+    PERFIL ||--o{ ROL_PERFIL : "compone"
+    ROL ||--o{ ROL_PERFIL : "compuesto de"
+    ROL ||--o{ USUARIO_ROL : "asignado a"
+    USUARIO ||--o{ USUARIO_ROL : "tiene"
+    USUARIO ||--o{ USUARIO_GRUPO : "pertenece a"
+    GRUPO ||--o{ USUARIO_GRUPO : "contiene"
+    EMPRESA ||--o{ GRUPO : "opcional"
+    USUARIO ||--o{ TOKEN_RENOVACION : "emite"
+
+    EMPRESA ||--o{ SEDE : "tiene"
+    EMPRESA ||--o{ ACTA : "cliente de"
+    SEDE ||--o{ ACTA : "sede de"
+
+    TIPO_DOCUMENTO ||--o{ DOCUMENTO : "clasifica"
+    USUARIO ||--o{ DOCUMENTO : "aprueba (opcional)"
+    DOCUMENTO ||--o| DIGITALIZACION_DOCUMENTO : "escaneo OCR (opcional)"
+
+    USUARIO ||--o{ ACTA : "crea"
+    ACTA ||--o{ ASISTENTE_REUNION : "registra"
+    ACTA ||--o| CONTENIDO_REUNION : "contenido sincronizado (opcional)"
+    ACTA ||--o{ COMPROMISO_ACTA : "genera"
+    DOCUMENTO ||--o{ COMPROMISO_ACTA : "cierra (opcional)"
+
+    PERMISO {
+        int IdPermiso PK
+        string Codigo UK "ej. documentos.firmar"
+        string Descripcion
+        string Modulo
+    }
+    PERFIL {
+        int IdPerfil PK
+        string Nombre UK
+        string Descripcion
+    }
+    PERFIL_PERMISO {
+        int IdPerfil PK_FK
+        int IdPermiso PK_FK
+    }
+    ROL {
+        int IdRol PK
+        string Nombre UK
+        string Descripcion
+    }
+    ROL_PERFIL {
+        int IdRol PK_FK
+        int IdPerfil PK_FK
+    }
+    USUARIO {
+        int IdUsuario PK
+        string NombreUsuario UK
+        string ClaveHash
+        string NombreCompleto
+        datetime FechaCreacion
+    }
+    USUARIO_ROL {
+        int IdUsuario PK_FK
+        int IdRol PK_FK
+    }
+    GRUPO {
+        int IdGrupo PK
+        string Nombre
+        int IdEmpresa FK "opcional"
+    }
+    USUARIO_GRUPO {
+        int IdUsuario PK_FK
+        int IdGrupo PK_FK
+    }
+    TOKEN_RENOVACION {
+        int IdTokenRenovacion PK
+        string Token UK
+        int IdUsuario FK
+        datetime FechaExpiracion
+        datetime FechaRevocacion "nulo si vigente"
+        string ReemplazadoPor "nulo si vigente"
+    }
+
+    EMPRESA {
+        int IdEmpresa PK
+        string Nombre
+        datetime FechaCreacion
+    }
+    SEDE {
+        int IdSede PK
+        int IdEmpresa FK
+        string Nombre
+    }
+
+    TIPO_DOCUMENTO {
+        int IdTipoDocumento PK
+        string Nombre
+    }
+    DOCUMENTO {
+        int IdDocumento PK
+        int IdTipoDocumento FK
+        int IdEmpresa FK "opcional"
+        int IdSede FK "opcional"
+        string NombreColaborador
+        string Actividad
+        date FechaCaptura
+        date FechaVencimiento
+        string Estado "Pendiente | Aprobado"
+        int IdUsuarioAprueba FK "opcional"
+        datetime FechaFirma "opcional"
+    }
+    DIGITALIZACION_DOCUMENTO {
+        int IdDocumento PK_FK
+        string NombreArchivoOriginal
+        string TipoContenido
+        long TamanioBytes
+        string TextoExtraido "opcional"
+        double Confianza "0-100, opcional"
+        datetime FechaEscaneo
+    }
+
+    ACTA {
+        int IdActa PK
+        int IdEmpresa FK
+        int IdSede FK
+        string Tipo "Reunion | Capacitacion"
+        string Titulo
+        date Fecha
+        string Asistentes "texto libre, opcional"
+        string Notas "opcional"
+        int IdUsuarioCreador FK
+        string Origen "Manual|Teams|GoogleMeet|Zoom|Webex"
+        string IdReunionExterna "opcional"
+        string UrlIngresoExterna "opcional"
+        datetime FechaSincronizacion "opcional"
+    }
+    ASISTENTE_REUNION {
+        int IdAsistente PK
+        int IdActa FK
+        string Nombre
+        string CorreoElectronico "opcional"
+        datetime HoraIngreso "opcional"
+        datetime HoraSalida "opcional"
+        int DuracionMinutos "opcional"
+    }
+    CONTENIDO_REUNION {
+        int IdActa PK_FK
+        string Resumen "opcional"
+        string UrlGrabacion "opcional"
+        string TipoContenido "transcript|recording|summary"
+        datetime FechaObtencion
+    }
+    COMPROMISO_ACTA {
+        int IdCompromiso PK
+        int IdActa FK
+        string Descripcion
+        string Responsable "opcional"
+        date FechaLimite "opcional"
+        string Estado "Pendiente | Cumplido"
+        string Origen "Bot | Manual"
+        int IdDocumentoRelacionado FK "opcional"
+        datetime FechaCreacion
+    }
