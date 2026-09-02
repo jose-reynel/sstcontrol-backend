@@ -58,6 +58,7 @@ constructor.Services.AddHttpClient<IConectorReunion, ConectorGoogleMeet>();
 constructor.Services.AddHttpClient<IConectorReunion, ConectorWebex>();
 constructor.Services.AddScoped<IFabricaConectoresReunion, FabricaConectoresReunion>();
 constructor.Services.AddScoped<IServicioSincronizacionReuniones, ServicioSincronizacionReuniones>();
+constructor.Services.AddScoped<IServicioMapeoReunion, ServicioMapeoReunion>();
 
 // ---- Autenticación JWT (consumida por la PWA y la app Maui) ----
 constructor.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

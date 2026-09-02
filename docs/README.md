@@ -53,3 +53,4 @@ de ejemplo.
 - `datos-semilla/02_empresas_y_sedes.sql`
 - `datos-semilla/03_usuarios_y_asignacion_roles.sql`
 - `datos-semilla/04_transacciones_simuladas.sql`
+- `datos-semilla/05_mapeos_reunion.sql`

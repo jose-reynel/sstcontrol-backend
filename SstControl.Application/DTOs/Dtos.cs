@@ -89,3 +89,17 @@ public record PaginaDto<T>(IReadOnlyList<T> Elementos, int Pagina, int TamanioPa
 {
     public int TotalPaginas => TamanioPagina <= 0 ? 0 : (int)Math.Ceiling(TotalElementos / (double)TamanioPagina);
 }
+
+// ---- Mapeo empresa/sede para webhooks de reunión (ver MapeoOrigenReunion en Dominio) ----
+
+public record MapeoOrigenReunionDto(int IdMapeo, string Origen, string TokenCorrelacion,
+    int IdEmpresa, string NombreEmpresa, int IdSede, string NombreSede,
+    int IdUsuarioResponsable, string NombreUsuarioResponsable, string? Descripcion);
+
+public record CrearMapeoOrigenReunionDto(
+    [property: Required] string Origen,
+    [property: Required(AllowEmptyStrings = false), MaxLength(300)] string TokenCorrelacion,
+    [property: Range(1, int.MaxValue)] int IdEmpresa,
+    [property: Range(1, int.MaxValue)] int IdSede,
+    [property: Range(1, int.MaxValue)] int IdUsuarioResponsable,
+    [property: MaxLength(200)] string? Descripcion);

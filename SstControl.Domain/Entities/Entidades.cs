@@ -538,3 +538,43 @@ public class RegistroAuditoria
     public string? Detalle { get; set; }
     public DateTimeOffset FechaHora { get; set; } = DateTimeOffset.UtcNow;
 }
+
+/// <summary>
+/// Convención de correlación entre una reunión externa y la empresa/sede a la
+/// que pertenece — sin esto, un webhook de "reunión terminada" no tiene forma
+/// de saber de qué cliente es. Cada plataforma expone su propio mecanismo de
+/// correlación "de fábrica", pensado exactamente para este propósito:
+///
+/// - Teams (Microsoft Graph): el valor <c>clientState</c> que se define al crear
+///   la suscripción de notificaciones — Graph lo reenvía intacto en cada evento.
+/// - Google Meet (Calendar push notifications): el header
+///   <c>X-Goog-Channel-Token</c>, definido al crear el canal — Google lo reenvía
+///   igual en cada notificación.
+/// - Zoom / Webex: no ofrecen un campo de correlación libre como los anteriores
+///   — se usa el correo del anfitrión (<c>host_email</c> / <c>hostEmail</c>) que
+///   sí viene en el payload de cada evento.
+///
+/// En los cuatro casos, <see cref="TokenCorrelacion"/> guarda ese valor tal cual
+/// (el clientState elegido, el channel token elegido, o el correo del anfitrión)
+/// y <see cref="Origen"/> distingue de qué plataforma es — la pareja es única.
+/// </summary>
+public class MapeoOrigenReunion
+{
+    public int IdMapeo { get; set; }
+
+    public OrigenReunion Origen { get; set; }
+    public string TokenCorrelacion { get; set; } = default!;
+
+    public int IdEmpresa { get; set; }
+    public Empresa Empresa { get; set; } = default!;
+    public int IdSede { get; set; }
+    public Sede Sede { get; set; } = default!;
+
+    /// <summary>Queda registrado como creador de toda Acta que este mapeo sincronice
+    /// automáticamente — normalmente el Asesor SST responsable de esa cuenta.</summary>
+    public int IdUsuarioResponsable { get; set; }
+    public Usuario UsuarioResponsable { get; set; } = default!;
+
+    public string? Descripcion { get; set; }
+    public DateTimeOffset FechaCreacion { get; set; } = DateTimeOffset.UtcNow;
+}

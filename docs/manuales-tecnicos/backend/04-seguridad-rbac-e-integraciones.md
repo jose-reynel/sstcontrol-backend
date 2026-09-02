@@ -37,7 +37,7 @@ simplemente nunca lo tendría nadie — ver
 | `documentos.escanear` | `POST /api/documentos/{id}/escaneo` |
 | `actas.ver` | `GET /api/actas`, `GET /api/actas/{id}/compromisos` |
 | `actas.crear` | `POST /api/actas`, `POST /api/actas/{id}/generar-minuta`, `POST /api/actas/{id}/compromisos`, `POST /api/compromisos/{id}/cumplir`, `POST /api/compromisos/{id}/vincular-documento` |
-| `reuniones.sincronizar` | Todo `/api/sincronizacion-reuniones/*` (excepto los webhooks, que son anónimos y se autentican por firma — ver abajo) |
+| `reuniones.sincronizar` | Todo `/api/sincronizacion-reuniones/*` y `/api/mapeos-reunion/*` (los webhooks en `/api/webhooks/*` son anónimos y se autentican por firma o token de correlación — ver abajo) |
 
 Endpoints que **solo** requieren `[Authorize]` (cualquier usuario
 autenticado, sin permiso específico): `GET/POST /api/documentos`,
@@ -90,22 +90,46 @@ Aquí solo el resumen de qué credenciales necesita cada uno en
 | Webex | Service App con refresh token de larga duración | `IdCliente`, `ClaveCliente`, `TokenRenovacion`, `TokenSecretoWebhook` |
 
 ### Webhooks (sincronización automática al terminar la reunión)
-`POST /api/sincronizacion-reuniones/{zoom|teams|google-meet|webex}` —
-`[AllowAnonymous]` a nivel de autenticación de usuario, porque quien llama
-es la plataforma externa, no un usuario de SstControl; **Zoom y Webex sí
-validan la autenticidad de cada petición por firma** antes de confiar en
-ella:
-- **Zoom**: responde al reto `endpoint.url_validation` con el hash
-  esperado (`X-Zm-Signature`).
-- **Webex**: valida `X-Spark-Signature` (HMAC-SHA1 sobre el cuerpo crudo,
-  comparación en tiempo constante) contra `Integraciones:Webex:TokenSecretoWebhook`.
-- **Teams y Google Meet**: el receptor está implementado pero el disparo
-  automático de sincronización queda como `TODO` — resolver la
-  empresa/sede desde el payload del evento requiere una convención propia
-  de tu organización (ver el comentario en
-  `SincronizacionReunionesControlador.cs`); mientras tanto, usa la
-  sincronización manual (`POST /api/sincronizacion-reuniones/{proveedor}`,
-  permiso `reuniones.sincronizar`).
+`POST /api/webhooks/{zoom|teams|google-meet|webex}` — `[AllowAnonymous]` a
+nivel de autenticación de usuario, porque quien llama es la plataforma
+externa, no un usuario de SstControl.
+
+**Convención de correlación empresa/sede** (`MapeoOrigenReunion` — la pieza
+que antes quedaba como `TODO`): un webhook de "reunión terminada" no trae de
+por sí a qué cliente pertenece esa reunión, así que cada plataforma se
+correlaciona con la empresa/sede correcta mediante un **token de
+correlación**, elegido por ti al configurar la integración:
+
+| Plataforma | Token de correlación | De dónde sale |
+|---|---|---|
+| Teams | `clientState` | Un valor libre que tú eliges al crear la suscripción de Microsoft Graph — Graph lo reenvía intacto en cada notificación. |
+| Google Meet | `X-Goog-Channel-Token` | Igual que Teams: un valor libre que tú eliges al crear el canal de observación de Calendar — Google lo reenvía en cada notificación. |
+| Zoom | Correo del anfitrión (`host_email`) | Zoom no ofrece un campo de correlación libre — se usa el correo del organizador, que sí viene en cada evento. |
+| Webex | Correo del anfitrión (`hostEmail`) | Mismo caso que Zoom. |
+
+Configura cada mapeo una vez por cuenta/organizador con
+`POST /api/mapeos-reunion` (permiso `reuniones.sincronizar`) — ver
+`docs/datos-semilla/05_mapeos_reunion.sql` para ejemplos reales. Si un
+webhook llega con un token que no tiene mapeo configurado, el evento se
+descarta con una advertencia en el log (nunca falla la petición — la
+plataforma no debe reintentar indefinidamente).
+
+Estado de implementación de cada webhook:
+- **Zoom y Webex**: sincronización automática completa (resuelven el mapeo y
+  llaman a `SincronizarReunionAsync`). Webex además valida la firma
+  `X-Spark-Signature` (HMAC-SHA1, comparación en tiempo constante) antes de
+  confiar en el evento; **Zoom todavía no valida `x-zm-signature`** — queda
+  como el único `TODO` de seguridad real pendiente en este flujo, aplicando
+  el mismo patrón que ya tiene Webex.
+- **Teams**: sincronización automática completa, iterando cada notificación
+  del array `value[]` que envía Microsoft Graph.
+- **Google Meet**: resuelve el mapeo (sabe a qué empresa/sede pertenece el
+  canal), pero **no determina qué reunión cambió** — es una limitación real
+  de la plataforma: Calendar push notifications solo avisan "algo cambió",
+  sin traer el detalle; hace falta una llamada de seguimiento a
+  `events.list` con el `syncToken` guardado del canal, que queda fuera de
+  este alcance. Mientras tanto, usa la sincronización manual
+  (`POST /api/sincronizacion-reuniones/googlemeet`) para Google Meet.
 
 ## OCR (Tesseract)
 `ServicioOcrTesseract` corre 100% local — sin API de nube, sin credenciales

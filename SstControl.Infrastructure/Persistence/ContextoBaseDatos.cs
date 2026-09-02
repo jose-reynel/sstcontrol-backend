@@ -54,6 +54,7 @@ public class ContextoBaseDatos : DbContext
     public DbSet<ItemChecklist> ItemsChecklist => Set<ItemChecklist>();
     public DbSet<RespuestaChecklist> RespuestasChecklist => Set<RespuestaChecklist>();
     public DbSet<RegistroAuditoria> RegistrosAuditoria => Set<RegistroAuditoria>();
+    public DbSet<MapeoOrigenReunion> MapeosOrigenReunion => Set<MapeoOrigenReunion>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -282,5 +283,23 @@ public class ContextoBaseDatos : DbContext
         modelo.Entity<RegistroAuditoria>()
             .HasOne(a => a.Usuario).WithMany(u => u.RegistrosAuditoria)
             .HasForeignKey(a => a.IdUsuario).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
+
+        // MAPEO_ORIGEN_REUNION: correlaciona un webhook externo (Teams/GoogleMeet/
+        // Zoom/Webex) con la empresa/sede a la que pertenece — ver el comentario
+        // en la entidad (Entidades.cs) para el mecanismo real de cada plataforma.
+        // La pareja (Origen, TokenCorrelacion) es única: no tiene sentido mapear
+        // el mismo token dos veces para la misma plataforma.
+        modelo.Entity<MapeoOrigenReunion>().HasKey(m => m.IdMapeo);
+        modelo.Entity<MapeoOrigenReunion>().Property(m => m.Origen).HasConversion<string>();
+        modelo.Entity<MapeoOrigenReunion>().HasIndex(m => new { m.Origen, m.TokenCorrelacion }).IsUnique();
+        modelo.Entity<MapeoOrigenReunion>()
+            .HasOne(m => m.Empresa).WithMany()
+            .HasForeignKey(m => m.IdEmpresa).OnDelete(DeleteBehavior.Cascade);
+        modelo.Entity<MapeoOrigenReunion>()
+            .HasOne(m => m.Sede).WithMany()
+            .HasForeignKey(m => m.IdSede).OnDelete(DeleteBehavior.Cascade);
+        modelo.Entity<MapeoOrigenReunion>()
+            .HasOne(m => m.UsuarioResponsable).WithMany()
+            .HasForeignKey(m => m.IdUsuarioResponsable).OnDelete(DeleteBehavior.Restrict);
     }
 }

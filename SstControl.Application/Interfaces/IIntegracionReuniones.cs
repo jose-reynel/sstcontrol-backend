@@ -1,3 +1,5 @@
+using SstControl.Aplicacion.DTOs;
+
 namespace SstControl.Aplicacion.Integraciones;
 
 /// <summary>Plataformas de reunión soportadas. El valor debe coincidir con OrigenReunion en Dominio.</summary>
@@ -64,4 +66,21 @@ public interface IServicioSincronizacionReuniones
 {
     Task<int> SincronizarReunionAsync(ProveedorReunion proveedor, string idReunionExterna, int idEmpresa, int idSede,
         SstControl.Dominio.Entidades.TipoActa tipo, int idUsuarioCreador);
+}
+
+/// <summary>
+/// Resuelve a qué empresa/sede pertenece una reunión externa, a partir del
+/// token de correlación que cada plataforma reenvía en su webhook — ver
+/// MapeoOrigenReunion (Dominio) para el mecanismo real de cada una. También
+/// administra el catálogo de mapeos (alta y consulta).
+/// </summary>
+public interface IServicioMapeoReunion
+{
+    /// <summary>Null si no hay ningún mapeo configurado para ese token — el
+    /// webhook debe descartar el evento sin fallar (no hay a qué cliente
+    /// asociar la reunión).</summary>
+    Task<MapeoOrigenReunionDto?> ResolverAsync(ProveedorReunion proveedor, string tokenCorrelacion);
+
+    Task<MapeoOrigenReunionDto> CrearAsync(CrearMapeoOrigenReunionDto datos);
+    Task<IReadOnlyList<MapeoOrigenReunionDto>> ObtenerTodosAsync();
 }

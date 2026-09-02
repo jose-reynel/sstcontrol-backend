@@ -11,6 +11,7 @@
    psql -U sst_user -d sst_control -f 02_empresas_y_sedes.sql
    psql -U sst_user -d sst_control -f 03_usuarios_y_asignacion_roles.sql
    psql -U sst_user -d sst_control -f 04_transacciones_simuladas.sql
+   psql -U sst_user -d sst_control -f 05_mapeos_reunion.sql
    ```
 
 ## Qué siembra cada script
@@ -21,6 +22,7 @@
 | `02_empresas_y_sedes.sql` | 5 empresas cliente con 9 sedes en total. |
 | `03_usuarios_y_asignacion_roles.sql` | 15 usuarios — **3 Administradores SST, 10 Asesores SST, 2 Auditores SST** — cada uno con su rol asignado y agrupado organizativamente a la empresa donde trabaja. |
 | `04_transacciones_simuladas.sql` | Actividad ficticia end-to-end: **39 documentos** (18 aprobados, 11 de ellos vencidos por no haberse renovado a tiempo — mezcla deliberada), **15 actas** (6 manuales + 9 sincronizadas: 2 Teams, 2 Zoom, 2 Google Meet, 3 Webex), **18 asistentes de reunión**, **9 contenidos de reunión** (resúmenes con marcadores que el bot reconoce), **20 compromisos** (17 generados por el bot + 3 manuales; 3 vinculados a un documento real), **6 digitalizaciones OCR** de ejemplo, y **10 registros de auditoría**. |
+| `05_mapeos_reunion.sql` | **8 mapeos** origen→empresa/sede (2 por empresa) — la configuración que permite que los webhooks de Teams/Google Meet/Zoom/Webex sepan a qué cliente pertenece cada reunión que sincronizan automáticamente. Ver el manual técnico de seguridad/RBAC/integraciones para el mecanismo real de cada plataforma. Idempotente. |
 
 > Estos números se verificaron corriendo los 4 scripts contra una instancia
 > real de PostgreSQL 16, sobre un esquema reconstruido a mano fiel al modelo
@@ -44,6 +46,7 @@ Verificado corriendo cada script dos veces seguidas contra PostgreSQL real:
 | `02_empresas_y_sedes.sql` | No | `Empresa.Nombre` no tiene índice único — correrlo dos veces duplica las 5 empresas. |
 | `03_usuarios_y_asignacion_roles.sql` | **Sí** | `ON CONFLICT DO NOTHING` sobre `Usuario.NombreUsuario` y las claves compuestas de `UsuarioRoles`/`UsuarioGrupos`; `Grupos` (sin índice único) se protege con `WHERE NOT EXISTS`. |
 | `04_transacciones_simuladas.sql` | No | Pensado para correrse una sola vez — resuelve sus FK por título de acta / nombre de colaborador, que no son únicos a nivel de base de datos. |
+| `05_mapeos_reunion.sql` | **Sí** | `ON CONFLICT DO NOTHING` sobre el índice único `("Origen", "TokenCorrelacion")`. |
 
 ## Credenciales de todos los usuarios semilla
 Contraseña única para practicar: **`Practica#2026`** (hash BCrypt real,

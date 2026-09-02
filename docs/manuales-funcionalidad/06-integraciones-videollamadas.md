@@ -9,11 +9,13 @@ automáticamente el acta con sus asistentes reales y su contenido
 ## Cómo llega una reunión al sistema
 Hay dos caminos, y no son excluyentes:
 
-1. **Automático (webhook)**: cuando la reunión termina en la plataforma
-   (Teams, Meet, Zoom o Webex), esta le avisa al sistema por sí sola y el
-   acta se crea sin que nadie tenga que hacer nada — siempre que tu
-   organización haya configurado esa conexión (ver el manual técnico de
-   backend, sección de integraciones).
+1. **Automático**: cuando la reunión termina en Teams, Zoom o Webex, el
+   sistema la recibe y crea el acta sin que nadie tenga que hacer nada —
+   siempre que un Administrador SST haya configurado antes a qué empresa y
+   sede pertenece esa cuenta (una única vez por organizador, no por
+   reunión). Google Meet, por una limitación propia de esa plataforma,
+   todavía no dispara la sincronización automática — usa el camino manual
+   para Google Meet mientras tanto.
 2. **Manual, bajo demanda**: un Administrador SST con el permiso
    `reuniones.sincronizar` puede pedir explícitamente que se traiga una
    reunión puntual, indicando su identificador (el sistema sabe cómo
